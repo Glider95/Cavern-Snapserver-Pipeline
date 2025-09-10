@@ -1,0 +1,18 @@
+[Unit]
+Description=Cavern Dolby pipeline
+Wants=network-online.target
+After=network-online.target sound.target
+
+[Service]
+Type=simple
+User=pi
+Group=audio
+Environment=LIVE_ALSA=1
+Environment=PULSE_SERVER=127.0.0.1:9
+ExecStart=/opt/cavern-pipeline/run_pipeline.sh
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
