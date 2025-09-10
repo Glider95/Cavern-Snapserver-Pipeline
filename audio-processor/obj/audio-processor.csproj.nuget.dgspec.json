@@ -1,0 +1,233 @@
+{
+  "format": 1,
+  "restore": {
+    "/Users/gregorynicol/Documents/ESP32/Cavern/audio-processor/audio-processor.csproj": {}
+  },
+  "projects": {
+    "/Users/gregorynicol/Documents/ESP32/Cavern/audio-processor/audio-processor.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/gregorynicol/Documents/ESP32/Cavern/audio-processor/audio-processor.csproj",
+        "projectName": "audio-processor",
+        "projectPath": "/Users/gregorynicol/Documents/ESP32/Cavern/audio-processor/audio-processor.csproj",
+        "packagesPath": "/Users/gregorynicol/.nuget/packages/",
+        "outputPath": "/Users/gregorynicol/Documents/ESP32/Cavern/audio-processor/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/Users/gregorynicol/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "/usr/local/share/dotnet/library-packs": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/Users/gregorynicol/Documents/ESP32/Cavern/Cavern.Format/Cavern.Format.csproj": {
+                "projectPath": "/Users/gregorynicol/Documents/ESP32/Cavern/Cavern.Format/Cavern.Format.csproj"
+              },
+              "/Users/gregorynicol/Documents/ESP32/Cavern/Cavern/Cavern.csproj": {
+                "projectPath": "/Users/gregorynicol/Documents/ESP32/Cavern/Cavern/Cavern.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.NET.ILLink.Tasks": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[8.0.19, )",
+              "autoReferenced": true
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Runtime.linux-arm64",
+              "version": "[8.0.19, 8.0.19]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Host.linux-arm64",
+              "version": "[8.0.19, 8.0.19]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Runtime.linux-arm64",
+              "version": "[8.0.19, 8.0.19]"
+            }
+          ],
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.413/PortableRuntimeIdentifierGraph.json"
+        }
+      },
+      "runtimes": {
+        "linux-arm64": {
+          "#import": []
+        }
+      }
+    },
+    "/Users/gregorynicol/Documents/ESP32/Cavern/Cavern.Format/Cavern.Format.csproj": {
+      "version": "2.0.2",
+      "restore": {
+        "projectUniqueName": "/Users/gregorynicol/Documents/ESP32/Cavern/Cavern.Format/Cavern.Format.csproj",
+        "projectName": "Cavern.Format",
+        "projectPath": "/Users/gregorynicol/Documents/ESP32/Cavern/Cavern.Format/Cavern.Format.csproj",
+        "packagesPath": "/Users/gregorynicol/.nuget/packages/",
+        "outputPath": "/Users/gregorynicol/Documents/ESP32/Cavern/Cavern.Format/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/Users/gregorynicol/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "netstandard2.1"
+        ],
+        "sources": {
+          "/usr/local/share/dotnet/library-packs": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "netstandard2.1": {
+            "targetAlias": "netstandard2.1",
+            "projectReferences": {
+              "/Users/gregorynicol/Documents/ESP32/Cavern/Cavern/Cavern.csproj": {
+                "projectPath": "/Users/gregorynicol/Documents/ESP32/Cavern/Cavern/Cavern.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "netstandard2.1": {
+          "targetAlias": "netstandard2.1",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "NETStandard.Library": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.413/RuntimeIdentifierGraph.json"
+        }
+      },
+      "runtimes": {
+        "linux-arm64": {
+          "#import": []
+        }
+      }
+    },
+    "/Users/gregorynicol/Documents/ESP32/Cavern/Cavern/Cavern.csproj": {
+      "version": "2.0.2",
+      "restore": {
+        "projectUniqueName": "/Users/gregorynicol/Documents/ESP32/Cavern/Cavern/Cavern.csproj",
+        "projectName": "Cavern",
+        "projectPath": "/Users/gregorynicol/Documents/ESP32/Cavern/Cavern/Cavern.csproj",
+        "packagesPath": "/Users/gregorynicol/.nuget/packages/",
+        "outputPath": "/Users/gregorynicol/Documents/ESP32/Cavern/Cavern/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/Users/gregorynicol/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "netstandard2.1"
+        ],
+        "sources": {
+          "/usr/local/share/dotnet/library-packs": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "netstandard2.1": {
+            "targetAlias": "netstandard2.1",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "netstandard2.1": {
+          "targetAlias": "netstandard2.1",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "NETStandard.Library": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.413/RuntimeIdentifierGraph.json"
+        }
+      },
+      "runtimes": {
+        "linux-arm64": {
+          "#import": []
+        }
+      }
+    }
+  }
+}

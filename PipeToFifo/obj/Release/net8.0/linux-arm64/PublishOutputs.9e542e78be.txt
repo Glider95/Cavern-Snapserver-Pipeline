@@ -1,0 +1,2 @@
+/Users/gregorynicol/Documents/ESP32/Cavern/dist/linux-arm64/bin/PipeToFifo/PipeToFifo.pdb
+/Users/gregorynicol/Documents/ESP32/Cavern/dist/linux-arm64/bin/PipeToFifo/PipeToFifo

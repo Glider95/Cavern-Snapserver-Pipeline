@@ -1,0 +1,4 @@
+/Users/gregorynicol/Documents/ESP32/Cavern/dist/linux-arm/bin/audio-processor/audio-processor.pdb
+/Users/gregorynicol/Documents/ESP32/Cavern/dist/linux-arm/bin/audio-processor/Cavern.Format.xml
+/Users/gregorynicol/Documents/ESP32/Cavern/dist/linux-arm/bin/audio-processor/Cavern.xml
+/Users/gregorynicol/Documents/ESP32/Cavern/dist/linux-arm/bin/audio-processor/audio-processor

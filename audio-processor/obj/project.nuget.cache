@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "sfsRpVqqOvE=",
+  "success": true,
+  "projectFilePath": "/Users/gregorynicol/Documents/ESP32/Cavern/audio-processor/audio-processor.csproj",
+  "expectedPackageFiles": [
+    "/Users/gregorynicol/.nuget/packages/microsoft.net.illink.tasks/8.0.19/microsoft.net.illink.tasks.8.0.19.nupkg.sha512",
+    "/Users/gregorynicol/.nuget/packages/microsoft.netcore.app.runtime.linux-arm64/8.0.19/microsoft.netcore.app.runtime.linux-arm64.8.0.19.nupkg.sha512",
+    "/Users/gregorynicol/.nuget/packages/microsoft.aspnetcore.app.runtime.linux-arm64/8.0.19/microsoft.aspnetcore.app.runtime.linux-arm64.8.0.19.nupkg.sha512",
+    "/Users/gregorynicol/.nuget/packages/microsoft.netcore.app.host.linux-arm64/8.0.19/microsoft.netcore.app.host.linux-arm64.8.0.19.nupkg.sha512"
+  ],
+  "logs": []
+}
