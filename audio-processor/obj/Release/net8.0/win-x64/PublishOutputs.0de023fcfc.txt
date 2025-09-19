@@ -1,1 +1,0 @@
-/home/runner/work/Cavern-Snapserver-Pipeline/Cavern-Snapserver-Pipeline/win-x64/bin/audio-processor/audio-processor.exe
