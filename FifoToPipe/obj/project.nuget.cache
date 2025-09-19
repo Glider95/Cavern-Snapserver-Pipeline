@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "YkgP9VJ6Admrqx29bfzJDF1pg0eUUg3/1xgqO5N5g4oopgDeBvVUe5CBcNn88lMc0YqyKm/91oPf7jpjN0XBGQ==",
+  "success": true,
+  "projectFilePath": "/home/runner/work/Cavern-Snapserver-Pipeline/Cavern-Snapserver-Pipeline/FifoToPipe/FifoToPipe.csproj",
+  "expectedPackageFiles": [
+    "/home/runner/.nuget/packages/microsoft.net.illink.tasks/8.0.19/microsoft.net.illink.tasks.8.0.19.nupkg.sha512",
+    "/home/runner/.nuget/packages/microsoft.netcore.app.runtime.win-x64/8.0.19/microsoft.netcore.app.runtime.win-x64.8.0.19.nupkg.sha512",
+    "/home/runner/.nuget/packages/microsoft.aspnetcore.app.runtime.win-x64/8.0.19/microsoft.aspnetcore.app.runtime.win-x64.8.0.19.nupkg.sha512",
+    "/home/runner/.nuget/packages/microsoft.netcore.app.host.win-x64/8.0.19/microsoft.netcore.app.host.win-x64.8.0.19.nupkg.sha512"
+  ],
+  "logs": []
+}
