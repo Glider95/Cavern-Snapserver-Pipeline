@@ -1,6 +1,8 @@
 # Cavern Snapserver Pipeline
 
-An audio processing pipeline that integrates Cavern spatial audio processing with Snapcast for multi-room audio streaming. Designed primarily for ARM64 Linux systems (Raspberry Pi).
+An audio processing pipeline that integrates Cavern spatial audio processing with Snapcast for multi-room audio streaming. Designed as a multiplatform solution (Windows x64, macOS, Linux) for processing Dolby bitstream audio (AC3, EAC3, TrueHD) using the Cavern audio engine.
+
+**Architecture Flow**: Media Player → Dolby bitstream input → Cavern Decoder → PCM output → Snapcast Server → Network clients (including ESP32-based smart speakers)
 
 Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
 
@@ -31,8 +33,10 @@ Always reference these instructions first and fallback to search or bash command
   mv Program.cs AudioConverter.cs audio-processor/
   cd audio-processor && dotnet build
   
-  # Publish for deployment - takes ~6 seconds
-  dotnet publish -c Release -r linux-arm64 --self-contained
+  # Publish for deployment (multiplatform) - takes ~6 seconds each
+  dotnet publish -c Release -r win-x64                    # Windows x64
+  dotnet publish -c Release -r linux-x64                  # Linux x64  
+  dotnet publish -c Release -r osx-x64                    # macOS x64
   
   # Pipe utilities - takes ~2 seconds each
   cd ../../pipe-utilities
@@ -50,15 +54,15 @@ Always reference these instructions first and fallback to search or bash command
   sudo scripts/install.sh
   ```
 
-- **Configure ALSA loopback (required for production):**
+- **Configure ALSA loopback (required for Linux audio input):**
   ```bash
-  # Load ALSA loopback module
+  # Load ALSA loopback module (Linux only)
   sudo modprobe snd-aloop
   
-  # Make persistent
+  # Make persistent (Linux only)
   echo "snd-aloop" | sudo tee -a /etc/modules
   
-  # Configure ALSA aliases
+  # Configure ALSA aliases (Linux only)
   sudo cp config/asound.conf.example /etc/asound.conf
   ```
 
@@ -86,7 +90,7 @@ Always reference these instructions first and fallback to search or bash command
 - **Run pipeline (development mode):**
   ```bash
   # From repository root - NEVER CANCEL, can take 5+ minutes to fully initialize
-  # Will fail on non-ARM64 systems or without ALSA hardware
+  # Cross-platform but may have different audio input requirements per OS
   scripts/run_pipeline.sh
   ```
 
@@ -100,10 +104,12 @@ Always reference these instructions first and fallback to search or bash command
 
 ### Manual Validation Requirements
 - **ALWAYS test the full pipeline after making changes to core components**
-- **Pipeline testing limitations**: The pipeline requires ARM64 Linux with ALSA loopback support. It WILL FAIL on development environments that lack:
-  - ARM64 architecture (pre-built binaries are ARM64-only)
-  - ALSA loopback module (`snd-aloop`)
-  - Audio hardware
+- **Pipeline testing requirements**: The pipeline is designed to work across platforms but has different audio input requirements:
+  - **Linux**: Requires ALSA loopback support for audio capture
+  - **Windows**: Uses different audio APIs (platform-specific configuration needed)  
+  - **macOS**: Uses Core Audio (platform-specific configuration needed)
+  - **Input**: Expects Dolby bitstream (AC3, EAC3, TrueHD) from media players
+  - **Output**: Produces PCM audio for Snapcast distribution to network clients
 
 ### Development Environment Validation
 - **Build validation**: Always verify that `dotnet build` succeeds for all C# components
@@ -112,11 +118,12 @@ Always reference these instructions first and fallback to search or bash command
 - **Log analysis**: Check `/tmp/cavern_logs/` or `/var/log/cavern/` for component startup logs
 
 ### Production Validation Scenarios
-When working on a real ARM64 system with ALSA support:
+When working on target systems with proper audio setup:
 1. **Full pipeline test**: Run `scripts/run_pipeline.sh` and verify all components start
-2. **Audio flow test**: Use `scripts/demo_run_pipeline.sh` with a test file
+2. **Audio flow test**: Use `scripts/demo_run_pipeline.sh` with a test file containing Dolby audio
 3. **Client connection test**: Connect with `snapclient tcp://127.0.0.1:1704`
-4. **Service test**: Verify systemd service with `sudo systemctl start cavern-pipeline`
+4. **Service test**: Verify systemd service with `sudo systemctl start cavern-pipeline` (Linux only)
+5. **ESP32 client test**: Connect ESP32-based smart speakers using the snapclient implementation
 
 ## Critical Timing Information
 
@@ -133,10 +140,10 @@ When working on a real ARM64 system with ALSA support:
 - **CRITICAL**: Pipeline processes run indefinitely - they are designed to be long-running services
 
 ### Expected Failures in Development
-- **ARM64 binary execution**: Pre-built binaries will fail with "Exec format error" on x64 systems
-- **ALSA module**: `sudo modprobe snd-aloop` will fail if module not available
-- **Audio devices**: `aplay -l` and `arecord -l` may show no devices on headless systems
-- **Pipeline execution**: Will fail without proper ALSA setup but should create FIFOs and start initial components
+- **Platform-specific audio**: Audio input methods vary by platform (ALSA on Linux, different APIs on Windows/macOS)
+- **ALSA module**: `sudo modprobe snd-aloop` will fail if module not available (Linux-specific)
+- **Audio devices**: Platform-specific audio device enumeration and configuration
+- **Pipeline execution**: May fail without proper audio setup but should create FIFOs and start initial components
 
 ## Common Tasks
 
@@ -154,26 +161,27 @@ cd ../FifoToPipe && dotnet build
 # 3. Test individual components (short timeout)
 timeout 3s dotnet run -- 2 eac3  # from audio-processor directory
 
-# 4. On ARM64 systems: test full pipeline
+# 4. On target platforms: test full pipeline
 scripts/run_pipeline.sh
 ```
 
 ### Dependencies and Architecture
 
 #### Core Dependencies (always required)
-- **Runtime**: .NET 6.0+ runtime, ALSA utilities, lsof, netcat-openbsd
+- **Runtime**: .NET 6.0+ runtime, lsof, netcat-openbsd
 - **Audio**: snapserver, snapclient, ffmpeg
-- **System**: ARM64 Linux, ALSA loopback support
+- **System**: Platform-specific audio systems (ALSA on Linux, Core Audio on macOS, etc.)
 
 #### Development Dependencies
 - **Build**: .NET 8.0 SDK
-- **Validation**: shellcheck, bash
+- **Validation**: shellcheck, bash (Linux/macOS), PowerShell (Windows)
 - **Optional**: git (for version control)
 
 #### Binary Architecture
-- **Pre-built binaries**: ARM64 Linux (linux-arm64/bin/)
-- **Target platform**: Raspberry Pi 4 recommended
-- **Will NOT run on**: x64 development environments
+- **Cross-platform**: Built for Windows x64, Linux x64, macOS x64
+- **Pre-built binaries**: Currently includes linux-arm64/bin/ (legacy, may be updated)
+- **Target platforms**: Modern desktop/server systems with sufficient processing power
+- **NOT suitable for**: Raspberry Pi or other low-power ARM devices
 
 ### Key File Locations
 
@@ -192,9 +200,10 @@ scripts/run_pipeline.sh
 - `/tmp/cavern_logs/` or `/var/log/cavern/`: Log files
 
 #### Pre-built Binaries
-- `linux-arm64/bin/CavernPipeServer.Multiplatform/`: Cavern audio engine
-- `linux-arm64/bin/audio-processor/`: Main processing component
+- `linux-arm64/bin/CavernPipeServer.Multiplatform/`: Cavern audio engine (legacy directory structure)
+- `linux-arm64/bin/audio-processor/`: Main processing component  
 - `linux-arm64/bin/PipeInputClient/`, `linux-arm64/bin/PipeToFifo/`: Data bridges
+- **Note**: Directory structure will be updated to support multiplatform binaries
 
 ### Troubleshooting Common Issues
 
@@ -204,8 +213,8 @@ scripts/run_pipeline.sh
 - **Build failures**: Check for missing dependencies in project files
 
 #### Pipeline Issues  
-- **Binary execution errors**: Expected on non-ARM64 systems
-- **ALSA errors**: Expected without proper audio hardware setup
+- **Platform-specific audio**: Different audio APIs and configurations per platform
+- **Audio codec support**: Ensure media players can output Dolby bitstream (AC3, EAC3, TrueHD)
 - **Named pipe errors**: Components start in sequence, some connection failures are normal during startup
 - **Port conflicts**: Run cleanup step in `scripts/run_pipeline.sh` to kill conflicting processes
 
@@ -215,6 +224,7 @@ scripts/run_pipeline.sh
 - **Missing log files**: Components may not create logs if they fail to start
 
 ### Environment Limitations
-- **Development environments**: Can build and test syntax, but cannot run full pipeline
-- **Production requirements**: ARM64 Linux with ALSA loopback and audio hardware
-- **CI/CD environments**: Suitable for build validation and script checking only
+- **Development environments**: Can build and test syntax, but require proper audio setup for full pipeline testing
+- **Production requirements**: Desktop/server-class hardware with multiplatform audio support
+- **ESP32 clients**: Snapclient implementation available at https://github.com/Glider95/snapclient
+- **Audio input**: Requires media players capable of Dolby bitstream output (AC3, EAC3, TrueHD)
