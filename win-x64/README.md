@@ -1,18 +1,16 @@
-# Cavern Snapserver Pipeline - Windows x64
+# Cavern Audio Processor - Windows x64
 
-This directory contains the Windows x64 build of the Cavern Snapserver Pipeline, which provides advanced audio processing using the Cavern audio library for spatial audio rendering.
+This directory contains the Windows x64 build of the Cavern Audio Processor, which provides advanced spatial audio processing using the Cavern audio library.
 
-## Components
+## What's Included
 
-The Windows x64 build includes three main executables:
+The Windows x64 build includes one main executable:
 
-1. **audio-processor.exe** - Main audio processing engine that handles Cavern spatial audio rendering
-2. **FifoToPipe.exe** - Input client that feeds audio data to the processor via named pipes
-3. **PipeToFifo.exe** - Output client that receives processed audio from the processor
+- **audio-processor.exe** - Cavern spatial audio processing engine that creates Windows named pipes for input/output
 
 ## Building
 
-To build the Windows x64 executables from source:
+To build the Windows x64 executable from source:
 
 ```batch
 # From the repository root
@@ -25,107 +23,191 @@ Or on Linux/macOS for cross-compilation:
 ./build-win-x64.sh
 ```
 
-## Usage
+## Quick Start
 
-### Quick Start
-
-1. Run the demo script to see the pipeline in action:
+1. Run the demo script:
    ```batch
    win-x64\run_pipeline_demo.bat
    ```
 
-### Manual Usage
-
-1. **Start the audio processor:**
-   ```batch
-   win-x64\bin\audio-processor\audio-processor.exe [channels] [codec]
+2. Or use PowerShell for advanced options:
+   ```powershell
+   win-x64\run_pipeline.ps1 -Help
    ```
-   - `channels`: Number of output channels (default: 2)
-   - `codec`: Audio codec - "eac3", "ac3", etc. (default: "eac3")
 
-2. **Feed audio input:**
-   ```batch
-   win-x64\bin\FifoToPipe\FifoToPipe.exe [input_source]
-   ```
-   - `input_source`: Path to audio file or pipe (default: "/tmp/snapcast-in")
+## Manual Usage
 
-3. **Consume processed output:**
-   ```batch
-   win-x64\bin\PipeToFifo\PipeToFifo.exe [output_destination]
-   ```
-   - `output_destination`: Path where processed audio will be written
-
-### Example Workflow
-
+Start the audio processor:
 ```batch
-# Terminal 1: Start the audio processor
-win-x64\bin\audio-processor\audio-processor.exe 2 eac3
-
-# Terminal 2: Feed audio input (replace with your audio file)
-win-x64\bin\FifoToPipe\FifoToPipe.exe audio_input.raw
-
-# Terminal 3: Capture processed output
-win-x64\bin\PipeToFifo\PipeToFifo.exe processed_output.raw
+win-x64\bin\audio-processor\audio-processor.exe [channels] [codec]
 ```
 
-## Named Pipes on Windows
+- `channels`: Number of output channels (default: 2)
+- `codec`: Audio codec - "eac3", "ac3", etc. (default: "eac3")
 
-The Windows version uses Windows named pipes for inter-process communication:
+**Example:**
+```batch
+win-x64\bin\audio-processor\audio-processor.exe 6 eac3
+```
 
-- **Input pipe**: `\\.\pipe\cavern-audio-input`
-- **Output pipe**: `\\.\pipe\cavern-audio-output`
+## Media Player Integration
 
-These are created automatically by the audio-processor when it starts.
+### Named Pipes Created
 
-## Audio Formats
+When the audio processor starts, it creates two Windows named pipes:
+- **Input**: `\\.\pipe\cavern-audio-input` - Send audio data here for processing
+- **Output**: `\\.\pipe\cavern-audio-output` - Receive processed spatial audio
 
-The pipeline processes audio in the following formats:
+### Using with FFmpeg
 
-- **Input**: Raw audio data (typically PCM or compressed formats like EAC3/AC3)
+**Basic Pipeline:**
+```batch
+# Terminal 1: Start the processor
+win-x64\bin\audio-processor\audio-processor.exe 2 eac3
+
+# Terminal 2: Stream media file to processor
+ffmpeg -i movie.mkv -map 0:a:0 -f data \\.\pipe\cavern-audio-input
+
+# Terminal 3: Play processed audio
+ffmpeg -f data -i \\.\pipe\cavern-audio-output -f wav - | ffplay -
+```
+
+**Save processed audio to file:**
+```batch
+ffmpeg -f data -i \\.\pipe\cavern-audio-output output.wav
+```
+
+**Stream to network (for Snapcast/similar):**
+```batch
+ffmpeg -f data -i \\.\pipe\cavern-audio-output -f wav tcp://localhost:4444
+```
+
+### Using with VLC Media Player
+
+1. **Install Virtual Audio Cable** (e.g., VB-Cable, Virtual Audio Cable)
+
+2. **Configure VLC:**
+   - Tools → Preferences → Audio
+   - Set Output to your virtual audio cable
+
+3. **Capture VLC output:**
+   ```batch
+   # Capture from virtual cable and send to Cavern
+   ffmpeg -f dshow -i audio="CABLE Output" -f data \\.\pipe\cavern-audio-input
+   ```
+
+4. **Play processed audio:**
+   ```batch
+   ffmpeg -f data -i \\.\pipe\cavern-audio-output -f wav - | ffplay -
+   ```
+
+### Using with Windows Media Players
+
+**Method 1: Screen/Audio Capture**
+```batch
+# Capture system audio (requires Stereo Mix enabled)
+ffmpeg -f dshow -i audio="Stereo Mix" -f data \\.\pipe\cavern-audio-input
+```
+
+**Method 2: File-based Processing**
+```batch
+# Extract audio from media file
+ffmpeg -i your_movie.mkv -map 0:a:0 -f data \\.\pipe\cavern-audio-input
+```
+
+### Real-time Audio Setup
+
+For real-time audio processing with minimal latency:
+
+```batch
+# Low-latency streaming with small buffer
+ffmpeg -f dshow -i audio="Your Audio Device" -ac 2 -ar 48000 -f data -bufsize 32k \\.\pipe\cavern-audio-input
+```
+
+## Audio Formats Supported
+
+- **Input**: Raw PCM audio data, compressed formats (EAC3/AC3)
 - **Output**: Processed spatial audio (format depends on codec settings)
-- **Sample Rate**: 48 kHz (standard)
-- **Bit Depth**: 16-bit (configurable)
+- **Sample Rate**: 48 kHz (recommended)
+- **Channels**: Configurable (2, 6, 8 channels supported)
 
-## Integration with Snapcast
+## Advanced Configuration
 
-To integrate with Snapcast on Windows:
+### Channel Configurations
+- **2 channels**: Stereo output with spatial processing
+- **6 channels**: 5.1 surround sound
+- **8 channels**: 7.1 surround sound
 
-1. Use FFmpeg or similar tool to stream audio to the input
-2. Configure Snapcast server to read from the output pipe
-3. The pipeline will provide spatial audio processing between input and output
+### Codec Options
+- **eac3**: Dolby Digital Plus (recommended)
+- **ac3**: Dolby Digital (legacy)
 
-## Dependencies
+### Example Configurations
+```batch
+# Stereo output with EAC3
+audio-processor.exe 2 eac3
 
-The executables are self-contained and include all necessary .NET runtime dependencies. No additional installation is required.
+# 5.1 surround with AC3
+audio-processor.exe 6 ac3
 
-## Supported Codecs
-
-- **EAC3** (Dolby Digital Plus) - Default
-- **AC3** (Dolby Digital)
-- **PCM** - Raw audio
+# 7.1 surround with EAC3
+audio-processor.exe 8 eac3
+```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **"Could not connect to pipe"**: Ensure audio-processor is running first
-2. **Access denied**: Run with administrator privileges if needed
-3. **Audio not processing**: Check that input audio format is supported
+1. **"Could not connect to pipe"**: Ensure audio-processor.exe is running first
+2. **Access denied**: Run as Administrator if needed
+3. **No audio processing**: Check input audio format compatibility
+4. **FFmpeg not found**: Install FFmpeg and add to PATH
 
-### Logs
+### Performance Tips
 
-Each component outputs status information to the console. Monitor these for debugging.
+- Use 48 kHz sample rate for best performance
+- Keep buffer sizes small for real-time processing
+- Close unnecessary applications to reduce audio latency
 
-## Performance
+## Integration Examples
 
-The Windows x64 build is optimized for performance with:
-- Single-file deployment for fast startup
-- Self-contained runtime (no .NET installation required)  
-- Trimmed assemblies for smaller size
-- Native code generation where possible
+### Home Theater Setup
+```batch
+# Movie playback with 5.1 processing
+audio-processor.exe 6 eac3
+ffmpeg -i movie.mkv -map 0:a:0 -f data \\.\pipe\cavern-audio-input
+ffmpeg -f data -i \\.\pipe\cavern-audio-output -f alsa hw:1,0
+```
+
+### Streaming Setup
+```batch
+# Process and stream to Snapcast
+audio-processor.exe 2 eac3
+ffmpeg -f data -i \\.\pipe\cavern-audio-output -f wav - | snapserver --stream.source=pipe:///dev/stdin
+```
+
+### Gaming Audio Enhancement
+```batch
+# Capture game audio and enhance
+audio-processor.exe 2 eac3
+ffmpeg -f dshow -i audio="Game Audio Device" -f data \\.\pipe\cavern-audio-input
+ffmpeg -f data -i \\.\pipe\cavern-audio-output -f directsound
+```
+
+## Technical Details
+
+- **Framework**: .NET 8.0 (self-contained)
+- **Size**: ~12MB (includes .NET runtime)
+- **Architecture**: x64 only
+- **IPC**: Windows named pipes
+- **Deployment**: Single-file executable
+
+## Dependencies
+
+None! The executable is self-contained and includes all necessary .NET runtime components.
 
 ## See Also
 
 - Linux ARM64 version in `../linux-arm64/`
-- Source code in `../audio-processor/`, `../FifoToPipe/`, `../PipeToFifo/`
+- Source code in `../audio-processor/`
 - Build scripts: `../build-win-x64.bat` and `../build-win-x64.sh`
