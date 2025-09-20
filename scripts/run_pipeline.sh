@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
-DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Detect if we're running from installed location or development directory
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/bin/CavernPipeServer.Multiplatform/CavernPipeServer" ]; then
+    # Running from installed location (/opt/cavern-pipeline)
+    BIN_DIR="$SCRIPT_DIR/bin"
+elif [ -f "$(dirname "$SCRIPT_DIR")/linux-arm64/bin/CavernPipeServer.Multiplatform/CavernPipeServer" ]; then
+    # Running from development directory
+    BIN_DIR="$(dirname "$SCRIPT_DIR")/linux-arm64/bin"
+else
+    echo "ERROR: Cannot find binary directory. Please check installation."
+    exit 1
+fi
+
 LOG_DIR="/var/log/cavern"  # system path if installed, fallback to /tmp
 if [ ! -w "$(dirname "$LOG_DIR")" ]; then LOG_DIR="/tmp/cavern_logs"; fi
 mkdir -p "$LOG_DIR"
@@ -23,7 +36,7 @@ mkfifo /tmp/dolby-in || true
 mkfifo /tmp/snapcast-out || true
 
 echo "### Step 3: CavernPipe server ###"
-"$DIR/bin/CavernPipeServer.Multiplatform/CavernPipeServer" > "$LOG_DIR/cavern_pipe.log" 2>&1 &
+"$BIN_DIR/CavernPipeServer.Multiplatform/CavernPipeServer" > "$LOG_DIR/cavern_pipe.log" 2>&1 &
 CAVERN_PIPE_PID=$!
 sleep 1
 
@@ -38,20 +51,15 @@ else
 fi
 
 echo "### Step 5: Audio Processor ###"
-"$DIR/bin/audio-processor/audio-processor" 2 eac3 > "$LOG_DIR/audio_processor.log" 2>&1 &
-sleep 1
+"$BIN_DIR/audio-processor/audio-processor" 2 eac3 > "$LOG_DIR/audio_processor.log" 2>&1 &
+sleep 10
 
 echo "### Step 6: Bridges ###"
-"$DIR/bin/PipeInputClient/PipeInputClient" /tmp/dolby-in > "$LOG_DIR/pipe_input.log" 2>&1 &
-"$DIR/bin/PipeToFifo/PipeToFifo" /tmp/snapcast-out > "$LOG_DIR/pipe_output.log" 2>&1 &
+"$BIN_DIR/PipeInputClient/PipeInputClient" /tmp/dolby-in > "$LOG_DIR/pipe_input.log" 2>&1 &
+"$BIN_DIR/PipeToFifo/PipeToFifo" /tmp/snapcast-out > "$LOG_DIR/pipe_output.log" 2>&1 &
 
 echo "### Step 7: Snapcast Output ###"
-snapserver \
-  -c /dev/null \
-  --stream.source="pipe:///tmp/snapcast-out?name=processed-dolby&mode=read&buffer_ms=2000" \
-  --server.control=1709 \
-  --http.port=1781 \
-   > "$LOG_DIR/snapserver_out.log" 2>&1 &
+snapserver -c /dev/null --stream.source="pipe:///tmp/snapcast-out?name=processed-dolby&mode=read&buffer_ms=3000&codec=opus&chunk_ms=20&stream.buffer=5000&stream.reconnect_interval=1000" --server.control=1709 --http.port=1781 > "$LOG_DIR/snapserver_out.log" 2>&1 &
 
 echo "Pipeline running. Logs: $LOG_DIR"
 echo "Listen with: snapclient tcp://127.0.0.1:1704"

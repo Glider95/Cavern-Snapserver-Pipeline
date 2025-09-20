@@ -1,0 +1,49 @@
+# Build Outputs
+bin/
+obj/
+out/
+build/
+
+# Runtime Files
+*.log
+/tmp/
+*.tmp
+*.temp
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# IDE Files
+.vscode/
+.vs/
+*.user
+*.suo
+*.sln.docstates
+
+# .NET
+*.pdb
+*.dll
+*.exe
+!linux-arm64/bin/**
+
+# Audio Files (for testing)
+*.wav
+*.mp3
+*.flac
+*.mkv
+*.mp4
+
+# Backup Files
+*.backup
+*.bak
+*~
+
+# Named Pipes and FIFOs
+/tmp/dolby-in
+/tmp/snapcast-out
+/tmp/CoreFxPipe_*
+
+# Log Directories
+/var/log/cavern/
+/tmp/cavern_logs/
