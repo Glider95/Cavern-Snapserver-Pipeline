@@ -132,6 +132,30 @@ For testing with a sample file:
 scripts/demo_run_pipeline.sh
 ```
 
+macOS
+-----
+
+This repository includes macOS helper scripts adapted from an example pipeline. They live in `scripts/`:
+
+- `run_pipeline_macos.sh` — starts the pipeline on macOS using either published self-contained executables (preferred) or dotnet DLLs. It creates the input/output FIFOs and a minimal snapserver config in `$HOME/cavern_logs`.
+- `demo_run_pipeline_macos.sh` — loops `mpv` to stream a demo file into the pipeline input FIFO (`/tmp/cavern_input.fifo`).
+
+Usage example on macOS:
+
+```bash
+# Start the pipeline (adjust env vars to point at built binaries if needed)
+scripts/run_pipeline_macos.sh
+
+# In another terminal, launch the demo feeder
+scripts/demo_run_pipeline_macos.sh
+```
+
+You can override paths by setting environment variables before running, for example:
+
+```bash
+AUDIO_PROCESSOR_EXE=/path/to/audio-processor scripts/run_pipeline_macos.sh
+```
+
 ### Client Connection
 
 Connect audio clients to the Snapcast server:
