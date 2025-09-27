@@ -5,6 +5,10 @@ obj/
 *.suo
 *.cache
 *.log
+*.pdb
+*.dll
+*.exe
+*.sln.docstates
 
 # Build outputs (keep only final Windows executables)
 audio-processor/bin/
@@ -14,10 +18,39 @@ FifoToPipe/obj/
 PipeToFifo/bin/
 PipeToFifo/obj/
 
-# Temporary files
+# Keep the final Windows x64 executables
+!win-x64/bin/*.exe
+!win-x64/bin/*/*.exe
+
+# Keep all linux-arm64 binaries
+!linux-arm64/bin/**
+
+# Runtime Files
+*.log
+
+# Audio Files (for testing)
+*.wav
+*.mp3
+*.flac
+*.mkv
+*.mp4
+
+# Backup Files
+*.backup
+*.bak
+*~
+
+# Named Pipes and FIFOs
 /tmp/
 *.tmp
 *.temp
+/tmp/dolby-in
+/tmp/snapcast-out
+/tmp/CoreFxPipe_*
+
+# Log Directories
+/var/log/cavern/
+/tmp/cavern_logs/
 
 # IDE files
 .vs/
@@ -28,7 +61,3 @@ PipeToFifo/obj/
 # OS files
 .DS_Store
 Thumbs.db
-
-# Keep the final Windows x64 executables
-!win-x64/bin/*.exe
-!win-x64/bin/*/*.exe
