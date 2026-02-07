@@ -1,10 +1,20 @@
 ﻿using Microsoft.Msagl.Drawing;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 
+using Cavern;
+using Cavern.Filters;
+using Cavern.Filters.Utilities;
+using Cavern.Format;
+using Cavern.Format.ConfigurationFile;
 using Cavern.Format.ConfigurationFile.Presets;
+using Cavern.Format.FilterSet;
+using Cavern.Format.Utilities;
+using Cavern.WPF;
 using VoidX.WPF;
 
 using FilterStudio.Graphs;
@@ -17,7 +27,7 @@ namespace FilterStudio {
         /// <summary>
         /// Add a new empty pipeline step after the selected node.
         /// </summary>
-        void AddStep(object sender, RoutedEventArgs e) => PipelineAddition(sender, (uid) => {
+        void AddStep(object sender, RoutedEventArgs e) => PipelineAddition(sender, uid => {
             pipeline.Source.AddSplitPoint(uid, (string)language["NSNew"]);
             return true;
         });
@@ -25,16 +35,61 @@ namespace FilterStudio {
         /// <summary>
         /// Add a new crossover step after the selected node.
         /// </summary>
-        void AddCrossover(object sender, RoutedEventArgs e) => PipelineAddition(sender, (uid) => {
+        void AddCrossover(object sender, RoutedEventArgs e) => PipelineAddition(sender, uid => {
             CrossoverDialog dialog = new(GetChannels());
             if (!dialog.ShowDialog().Value) {
                 return false;
             }
 
-            CrossoverFilterSet crossover = new((string)language["LabXO"], dialog.Type, SampleRate, 65536, dialog.Target,
-                dialog.Crossovers.Where(x => x.frequency != null).Select(x => (x.channel, (float)x.frequency)).ToArray());
+            CrossoverFilterSet crossover = new((string)language["LabXO"], dialog.Type, SampleRate, 65536, dialog.Description);
             crossover.Add(pipeline.Source, uid);
             return true;
+        });
+
+        /// <summary>
+        /// Makes a new configuration file that only contains the selected pipeline step.
+        /// </summary>
+        void CreateNewConfigurationFromStep(object sender, RoutedEventArgs e) => PipelineAction(sender, uid =>
+            pipeline.Source = new CavernFilterStudioConfigurationFile(pipeline.Source.SplitPoints[uid])
+        );
+
+        /// <summary>
+        /// Export the currently selected pipeline step as a <see cref="FilterSet"/>.
+        /// </summary>
+        void ExportStepToDevice(object sender, RoutedEventArgs e) => PipelineAction(sender, uid => {
+            FilterSetTargetSelector target = new() {
+                Background = Background,
+                Resources = Resources,
+            };
+            if (!target.ShowDialog().Value) {
+                return;
+            }
+
+            FilterSet set = FilterSet.Create(target.Result, GetChannels(), SampleRate);
+            SaveFileDialog exporter = new() {
+                Filter = $"{set.FileExtension.ToUpper(CultureInfo.InvariantCulture)} {language["files"]}|*.{set.FileExtension}",
+                FileName = (string)language["ExpFN"],
+            };
+            if (!exporter.ShowDialog().Value) {
+                return;
+            }
+
+            List<Filter>[] filters = new List<Filter>[set.ChannelCount];
+            for (int ch = 0; ch < set.ChannelCount; ch++) {
+                filters[ch] = [];
+                FilterGraphNode current = pipeline.Source.GetSplitPointRoot(uid, ch);
+                do {
+                    current = current.Children[0];
+                    filters[ch].Add(current.Filter);
+                } while (current.Children.Count == 1 && current.Filter is not OutputChannel);
+            }
+
+            if (set is IIRFilterSet iirSet) {
+                for (int i = 0; i < set.ChannelCount; i++) {
+                    iirSet.SetupChannel(i, [.. filters[i].OfType<BiquadFilter>()]);
+                }
+            }
+            set.Export(exporter.FileName);
         });
 
         /// <summary>
@@ -52,6 +107,9 @@ namespace FilterStudio {
         /// Merge all pipeline steps to one.
         /// </summary>
         void MergeSteps(object _, RoutedEventArgs e) {
+            if (pipeline.Source == null) {
+                return;
+            }
             pipeline.Source.MergeSplitPoints();
             Reload(null, null);
         }
@@ -60,10 +118,33 @@ namespace FilterStudio {
         /// Rename the currently selected pipeline step through a popup.
         /// </summary>
         void RenameStep(object sender, RoutedEventArgs e) => PipelineAction(sender, uid => {
-            RenameDialog rename = new RenameDialog(pipeline.Source.SplitPoints[uid].name);
+            RenameDialog rename = new(pipeline.Source.SplitPoints[uid].Name);
             if (rename.ShowDialog().Value) {
                 pipeline.Source.RenameSplitPoint(uid, rename.NewName);
             }
+        });
+
+        /// <summary>
+        /// Select channels which have any input data, and simulate all filters in the selected pipeline step to a WAV file.
+        /// </summary>
+        void SimulateToWAV(object sender, RoutedEventArgs e) => PipelineAction(sender, uid => {
+            ChannelSelector channels = new(this);
+            if (!channels.ShowDialog().Value) {
+                return;
+            }
+
+            SaveFileDialog exporter = new() {
+                Filter = $"WAV {language["files"]}|*.wav",
+                FileName = (string)language["ExpFN"],
+            };
+            if (exporter.ShowDialog().Value == false) {
+                return;
+            }
+
+            ConfigurationFileSimulator simulator = new(pipeline.Source);
+            MultichannelWaveform simulation = simulator.Simulate(channels.SelectedChannels, 65536);
+            using RIFFWaveWriter writer = new(exporter.FileName, simulation.Channels, simulation.Length, SampleRate, BitDepth.Float32);
+            writer.Write(simulation.ToArray());
         });
 
         /// <summary>
@@ -139,8 +220,11 @@ namespace FilterStudio {
                 ((string)language["OpAdP"], (_, e) => AddStep(element, e)),
                 ((string)language["OpAdC"], (_, e) => AddCrossover(element, e)),
                 (null, null),
+                ((string)language["CoSol"], (_, e) => CreateNewConfigurationFromStep(element, e)),
                 ((string)language["CoMeN"], (_, e) => MergeWithNext(element, e)),
-                (null, null), // Separator for deletion
+                ((string)language["CoExp"], (_, e) => ExportStepToDevice(element, e)),
+                ((string)language["CoSim"], (_, e) => SimulateToWAV(element, e)),
+                (null, null),
                 ((string)language["CoRen"], (_, e) => RenameStep(element, e)),
                 ((string)language["CoCle"], (_, e) => ClearStep(element, e)),
                 ((string)language["CoDel"], (_, e) => DeleteStep(element, e))

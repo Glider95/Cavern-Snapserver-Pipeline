@@ -21,7 +21,10 @@ public class Program : ICavernizeApp {
     public bool Rendering { get; private set; }
 
     /// <inheritdoc/>
-    public string FilePath => file?.Path;
+    public AudioFile LoadedFile { get; private set; }
+
+    /// <inheritdoc/>
+    public CavernizeTrack SelectedTrack { get; set; }
 
     /// <inheritdoc/>
     public ExportFormat ExportFormat { get; set; } = new(Codec.PCM_LE, null, short.MaxValue, null);
@@ -30,18 +33,13 @@ public class Program : ICavernizeApp {
     public RenderTarget RenderTarget { get; set; } = new(null, ChannelPrototype.ref512);
 
     /// <inheritdoc/>
-    public float RenderGain { get; set; } = 1;
+    public bool SurroundSwap { get; set; }
 
     /// <inheritdoc/>
     public UpmixingSettings UpmixingSettings => new(true);
 
     /// <inheritdoc/>
-    public SpecialRenderModeSettings SpecialRenderModeSettings => new();
-
-    /// <summary>
-    /// Last opened audio file.
-    /// </summary>
-    AudioFile file;
+    public RenderingSettings RenderingSettings => new();
 
     /// <summary>
     /// Render process handler.
@@ -66,11 +64,12 @@ public class Program : ICavernizeApp {
             throw new CommandException("No supported audio tracks were found in the file.");
         }
 
-        this.file = file;
-        environment.AttachToListener(file.Tracks[0], false);
+        LoadedFile = file;
+        SelectedTrack = file.Tracks[0];
+        environment.AttachToListener(SelectedTrack);
 
         string name = Path.GetFileNameWithoutExtension(file.Path);
-        Console.WriteLine($"Opened {name} containing {file.Tracks[0]}.");
+        Console.WriteLine($"Opened {name} containing {SelectedTrack}.");
     }
 
     /// <inheritdoc/>

@@ -1,8 +1,9 @@
-﻿using Cavern.Channels;
+﻿using System;
+
+using Cavern.Channels;
 using Cavern.Format.Common;
 using Cavern.Format.Consts;
 using Cavern.Format.Utilities;
-using System;
 
 namespace Cavern.Format.Decoders.MeridianLosslessPacking {
     /// <summary>
@@ -41,7 +42,20 @@ namespace Cavern.Format.Decoders.MeridianLosslessPacking {
             int accessUnitLength = extractor.Read(12); // In words
             extractor.Skip(16); // Input timing
             extractor.Expand(reader.Read(accessUnitLength * sizeof(short) - MeridianLosslessPackingConsts.mustDecode));
-            ReadMajorSync(extractor);
+            try {
+                ReadMajorSync(extractor);
+            } catch {
+                // Remove when the format is correctly supported
+                extractor.Expand(reader.Read(16384));
+                int syncWordCache = 0;
+                while (!extractor.RollingIntCheck(ref syncWordCache, MeridianLosslessPackingConsts.syncWord)) {
+                    if (extractor.Position > 16384 * 8) {
+                        throw; // Sync word not found in a reasonable amount of data
+                    }
+                }
+                extractor.Position -= 32;
+                ReadMajorSync(extractor);
+            }
             return extractor;
         }
 
@@ -49,7 +63,8 @@ namespace Cavern.Format.Decoders.MeridianLosslessPacking {
         /// Parse general stream metadata.
         /// </summary>
         void ReadMajorSync(BitExtractor extractor) {
-            if (extractor.Read(32) != MeridianLosslessPackingConsts.syncWord) {
+            int syncWordFound = extractor.Read(32);
+            if (syncWordFound != MeridianLosslessPackingConsts.syncWord) {
                 throw new SyncException();
             }
             ParseSampleRate(extractor.Read(4));
@@ -73,25 +88,21 @@ namespace Cavern.Format.Decoders.MeridianLosslessPacking {
             extractor.Skip(2); // Reserved
             extractor.Skip(2); // Extended substream info
             int substreamInfo = extractor.Read(8);
-            if ((substreamInfo & (1 << 7)) != 0) {
-                TracksIn16CH = 16; // 16 channel presentation present
-            }
-            for (int i = 0; i < SubstreamCount; i++) {
-                extractor.Skip(63); // Channel meaning
-                if (extractor.ReadBit()) { // Extra channel meaning
-                    int extraChannelMeaningLength = (extractor.Read(4) + 1) * sizeof(short);
-                    int readFrom = extractor.Position;
-                    if (TracksIn16CH != 0) { // 16 channel meaning
-                        extractor.Skip(11); // Mixing levels
-                        TracksIn16CH = extractor.Read(5) + 1;
-                        if (extractor.ReadBit()) { // Objects only
-                            Beds = extractor.ReadBit() ? // LFE present
-                                new ReferenceChannel[] { ReferenceChannel.ScreenLFE } :
-                                Array.Empty<ReferenceChannel>();
-                        }
+
+            extractor.Skip(63); // Channel meaning
+            if (extractor.ReadBit()) { // Extra channel meaning
+                int extraChannelMeaningLength = (extractor.Read(4) + 1) * sizeof(short);
+                int readFrom = extractor.Position;
+                if ((substreamInfo & (1 << 7)) != 0) { // 16 channel meaning
+                    extractor.Skip(11); // Mixing levels
+                    TracksIn16CH = extractor.Read(5) + 1;
+                    if (extractor.ReadBit()) { // Objects only
+                        Beds = extractor.ReadBit() ? // LFE present
+                            new ReferenceChannel[] { ReferenceChannel.ScreenLFE } :
+                            Array.Empty<ReferenceChannel>();
                     }
-                    extractor.Position = readFrom + extraChannelMeaningLength;
                 }
+                extractor.Position = readFrom + extraChannelMeaningLength;
             }
         }
     }

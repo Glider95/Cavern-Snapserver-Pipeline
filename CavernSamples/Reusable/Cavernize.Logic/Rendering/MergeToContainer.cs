@@ -40,22 +40,13 @@ public sealed class MergeToContainer {
     /// </summary>
     public static string GetPossibleContainers(CavernizeTrack input, Codec output, FFmpeg ffmpeg) {
         const string matroskaOnly = "Matroska|*.mkv";
+        string native = output.GetSaveDialogFilter();
         if (output.IsEnvironmental()) {
-            return output switch {
-                Codec.LimitlessAudio => "Limitless Audio Format|*.laf",
-                Codec.ADM_BWF or Codec.ADM_BWF_Atmos => "ADM Broadcast Wave Format|*.wav|ADM BWF + Audio XML|*.xml",
-                Codec.DAMF => "Dolby Atmos Master Format|*.atmos",
-                _ => throw new NotImplementedException(),
-            };
+            return output.GetSaveDialogFilter() ?? throw new NotImplementedException();
         } else if (output == Codec.PCM_Float || output == Codec.PCM_LE) {
-            const string wav = "RIFF WAVE|*.wav|Limitless Audio Format|*.laf|Core Audio Format|*.caf";
-            return ffmpeg.Found || input.Container == Container.Matroska ? $"{matroskaOnly}|{wav}" : wav;
+            return ffmpeg.Found || input.Container == Container.Matroska ? $"{matroskaOnly}|{native}" : native;
         } else if (ffmpeg.Found) {
-            return output switch {
-                Codec.AC3 => matroskaOnly + "|AC-3|*.ac3",
-                Codec.EnhancedAC3 => matroskaOnly + "|Enhanced AC-3|*.ec3",
-                _ => matroskaOnly
-            };
+            return native == null ? matroskaOnly : $"{matroskaOnly}|{native}";
         } else {
             return matroskaOnly;
         }
@@ -65,6 +56,16 @@ public sealed class MergeToContainer {
     /// Disable FFmpeg's internal mixer and any channel map export for supporting the maximum number of channels for each codec.
     /// </summary>
     public void Allow8PlusChannels() => args.Allow8PlusChannels();
+
+    /// <summary>
+    /// Remove some conditions under which FFmpeg would refuse to process the file.
+    /// </summary>
+    public void MakeSafe(string fileName) {
+        if (fileName[fileName.IndexOf('.')..].IsNative()) {
+            args.RemoveMapping(FFmpegStream.Video);
+            args.RemoveMapping(FFmpegStream.Subtitle);
+        }
+    }
 
     /// <summary>
     /// Name of the <see cref="render"/>ed audio track merged to the output.

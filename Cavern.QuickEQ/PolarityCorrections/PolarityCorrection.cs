@@ -1,4 +1,6 @@
-﻿using Cavern.QuickEQ.Simulations;
+﻿using System;
+
+using Cavern.Filters;
 using Cavern.Utilities;
 
 namespace Cavern.QuickEQ.PolarityCorrections {
@@ -18,6 +20,22 @@ namespace Cavern.QuickEQ.PolarityCorrections {
         }
 
         /// <summary>
+        /// Get which of the passed <paramref name="simulations"/> have inverted phase using a specific <paramref name="method"/>.
+        /// </summary>
+        public static bool[] GetInvertedChannels(PolarityCorrectionType method, MultichannelWaveform simulations) {
+            if (method == PolarityCorrectionType.None) {
+                return new bool[simulations.Channels];
+            }
+
+            PolarityCorrection corrector = method switch {
+                PolarityCorrectionType.ConstructivityBased => new ConstructivityBasedPolarityCorrection(),
+                PolarityCorrectionType.ImpulsePeakBased => new ImpulsePeakBasedPolarityCorrection(),
+                _ => throw new NotImplementedException()
+            };
+            return corrector.GetInvertedChannels(simulations);
+        }
+
+        /// <summary>
         /// Get which of the passed <paramref name="simulations"/> have inverted phase.
         /// </summary>
         public abstract bool[] GetInvertedChannels(MultichannelWaveform simulations);
@@ -26,6 +44,6 @@ namespace Cavern.QuickEQ.PolarityCorrections {
         /// Get which of the passed <paramref name="measurements"/> will have inverted phase when its <paramref name="filters"/> are applied.
         /// </summary>
         public bool[] GetInvertedChannels(MultichannelWaveform measurements, MultichannelWaveform filters) =>
-            GetInvertedChannels(RoomSimulation.Simulate(measurements, filters));
+            GetInvertedChannels(MultichannelConvolver.ConvolveSafe(measurements, filters));
     }
 }

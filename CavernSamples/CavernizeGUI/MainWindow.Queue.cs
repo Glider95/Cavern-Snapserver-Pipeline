@@ -9,7 +9,6 @@ using Cavern.Format.Common;
 
 using Cavernize.Logic.Models;
 using Cavernize.Logic.Rendering;
-using CavernizeGUI.Elements;
 using CavernizeGUI.Resources;
 
 namespace CavernizeGUI {
@@ -23,7 +22,7 @@ namespace CavernizeGUI {
                 if (Width < minWidth) {
                     Width = minWidth;
                 }
-                jobs.Add(new QueuedJob(file, (CavernizeTrack)tracks.SelectedItem, RenderTarget, (ExportFormat)audio.SelectedItem, renderTask));
+                jobs.Add(new QueuedJob(LoadedFile, (CavernizeTrack)tracks.SelectedItem, RenderTarget, (ExportFormat)audio.SelectedItem, renderTask));
             }
         }
 
@@ -53,7 +52,7 @@ namespace CavernizeGUI {
         /// </summary>
         void QueueDrop(object _, DragEventArgs e) {
             if (e.Data is DataObject obj && obj.ContainsFileDropList()) {
-                AudioFile oldFile = file;
+                AudioFile oldFile = LoadedFile;
                 StringCollection files = obj.GetFileDropList();
                 List<string> invalids = [];
                 if (files.Count > 1 &&
@@ -62,7 +61,7 @@ namespace CavernizeGUI {
                 } else {
                     ProcessDroppedFilesSeparately(files, invalids);
                 }
-                file = oldFile;
+                LoadedFile = oldFile;
                 if (invalids.Count != 0) {
                     Error($"{(string)language["DropI"]}\n{string.Join('\n', invalids)}");
                 }
@@ -120,7 +119,7 @@ namespace CavernizeGUI {
         /// </summary>
         void QueueRenderTask(Action renderTask, List<string> invalids, string fileName) {
             if (renderTask != null) {
-                jobs.Add(new QueuedJob(file, (CavernizeTrack)tracks.SelectedItem, RenderTarget, (ExportFormat)audio.SelectedItem, renderTask));
+                jobs.Add(new QueuedJob(LoadedFile, (CavernizeTrack)tracks.SelectedItem, RenderTarget, (ExportFormat)audio.SelectedItem, renderTask));
             } else {
                 invalids.Add(fileName);
             }
@@ -135,7 +134,7 @@ namespace CavernizeGUI {
                 QueuedJob job = jobs[i];
                 Dispatcher.Invoke(() => {
                     job.Prepare(this);
-                    SoftPreRender();
+                    AttachToListener();
                 });
                 job.Run();
                 Dispatcher.Invoke(() => this.jobs.Remove(job));

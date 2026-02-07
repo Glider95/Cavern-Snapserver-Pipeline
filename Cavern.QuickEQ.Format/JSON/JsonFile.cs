@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
+
+using Cavern.Format.Utilities;
 
 namespace Cavern.Format.JSON {
     /// <summary>
@@ -31,6 +34,7 @@ namespace Cavern.Format.JSON {
                 for (int i = 0, c = elements.Count; i < c; i++) {
                     if (elements[i].Key == key) {
                         elements[i] = key.Stores(value);
+                        return;
                     }
                 }
                 elements.Add(key.Stores(value));
@@ -85,10 +89,13 @@ namespace Cavern.Format.JSON {
                         result.Add(key.Stores(ParseValue(ref contents, ref offset)));
                         break;
                     case '}':
+                        offset++;
                         return result;
                 }
 
-                offset++;
+                if (contents[offset] != '}') {
+                    offset++; // Parsing stops at end of items, arrays, objects
+                }
             }
 
             return result;
@@ -131,14 +138,17 @@ namespace Cavern.Format.JSON {
         /// Parse a value (between the &quot;:&quot; and &quot;,&quot;).
         /// </summary>
         static object ParseValue(ref string source, ref int offset) {
+            SkipWhitespace(ref source, ref offset);
             switch (source[offset]) {
                 case '{':
                     return new JsonFile(Parse(ref source, ref offset));
                 case '[':
                     offset++;
+                    SkipWhitespace(ref source, ref offset);
                     List<object> list = new List<object>();
                     while (offset < source.Length) {
-                        list.Add(ParseUntil(ref source, ref offset, ',', ']'));
+                        list.Add(ParseValue(ref source, ref offset));
+                        SkipWhitespace(ref source, ref offset);
                         if (source[offset] == ']') {
                             return list.ToArray();
                         } else {
@@ -146,16 +156,38 @@ namespace Cavern.Format.JSON {
                         }
                     }
                     return list.ToArray();
+                case '"':
+                    offset++;
+                    string result = ParseString(ref source, ref offset).Unescape();
+                    while (offset < source.Length && source[offset] != ',' && source[offset] != ']' && source[offset] != '}') {
+                        offset++;
+                    }
+                    return result;
                 default:
-                    return ParseUntil(ref source, ref offset, ',');
+                    string value = ParseUntil(ref source, ref offset, ',', ']', '}');
+                    if (int.TryParse(value, out int intValue)) {
+                        return intValue;
+                    } else if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out double doubleValue)) {
+                        return doubleValue;
+                    } else if (bool.TryParse(value, out bool boolValue)) {
+                        return boolValue;
+                    }
+                    return value; // Unsupported types are handled as strings
             }
         }
 
+        /// <summary>
+        /// Write the value of an element to the JSON object under output.
+        /// </summary>
         static void AppendValue(StringBuilder result, object value) {
             if (value is bool b) {
                 result.Append(b.ToString().ToLowerInvariant());
+            } else if (value is double dbl) {
+                result.Append(dbl.ToString(CultureInfo.InvariantCulture));
+            } else if (value is decimal dec) {
+                result.Append(dec.ToString(CultureInfo.InvariantCulture));
             } else if (value is string str) {
-                result.Append('"').Append(str).Append('"');
+                result.Append('"').Append(str.Escape()).Append('"');
             } else if (value is object[] array) {
                 result.Append("[ ");
                 for (int i = 0; i < array.Length; i++) {
@@ -167,6 +199,16 @@ namespace Cavern.Format.JSON {
                 result.Append(" ]");
             } else {
                 result.Append(value);
+            }
+        }
+
+        /// <summary>
+        /// Jump to the next meaningful data point.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void SkipWhitespace(ref string source, ref int offset) {
+            while (offset < source.Length && char.IsWhiteSpace(source[offset])) {
+                offset++;
             }
         }
 

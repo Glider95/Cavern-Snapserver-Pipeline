@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 
 using Cavern.Utilities;
@@ -8,6 +9,7 @@ namespace Cavern.Filters.Utilities {
     /// <summary>
     /// Wraps a filter to be handled in a multichannel complex filter set, such as equalizer platform configuration files.
     /// </summary>
+    [DebuggerDisplay("{ToString(),nq} ({GetHashCode(),nq})")]
     public class FilterGraphNode : ICloneable {
         /// <summary>
         /// Filters that add their results together before being processed by this filter and going forward in the filter graph.
@@ -46,7 +48,7 @@ namespace Cavern.Filters.Utilities {
         public void AddAfterParents(FilterGraphNode newParent) {
             newParent.parents.AddRange(parents);
             for (int i = 0, c = parents.Count; i < c; i++) {
-                parents[i].children.Clear();
+                parents[i].children.Remove(this);
                 parents[i].children.Add(newParent);
             }
             parents.Clear();
@@ -68,7 +70,7 @@ namespace Cavern.Filters.Utilities {
         public void AddBeforeChildren(FilterGraphNode newChild) {
             newChild.children.AddRange(children);
             for (int i = 0, c = children.Count; i < c; i++) {
-                children[i].parents.Clear();
+                children[i].parents.Remove(this);
                 children[i].parents.Add(newChild);
             }
             children.Clear();
@@ -118,6 +120,16 @@ namespace Cavern.Filters.Utilities {
         public void AddParent(FilterGraphNode parent) {
             parents.Add(parent);
             parent.children.Add(this);
+        }
+
+        /// <summary>
+        /// Append a filter to process this filter's result in the filter graph and return the new node containing that filter.
+        /// </summary>
+        public FilterGraphNode AddParent(Filter filter) {
+            FilterGraphNode node = new FilterGraphNode(filter);
+            parents.Add(node);
+            node.children.Add(this);
+            return node;
         }
 
         /// <summary>
@@ -175,11 +187,26 @@ namespace Cavern.Filters.Utilities {
             DetachParents();
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Change ownership of two nodes' <see cref="Children"/>.
+        /// </summary>
+        public void SwapChildren(FilterGraphNode with) {
+            List<FilterGraphNode> temp = new List<FilterGraphNode>();
+            temp.AddRange(children);
+            DetachChildren();
+            AddChildren(with.children);
+            with.DetachChildren();
+            with.AddChildren(temp);
+        }
+
+        /// <summary>
+        /// Create a copy of this node and its filter. Does not copy graph relationships.
+        /// </summary>
         public object Clone() => new FilterGraphNode((Filter)Filter.Clone());
 
         /// <inheritdoc/>
         public override string ToString() => Filter != null ?
-            (Filter is ILocalizableToString loc ? loc.ToString(CultureInfo.CurrentCulture) : Filter.ToString()) : "Merge";
+            (Filter is ILocalizableToString loc ? loc.ToString(CultureInfo.CurrentCulture) : Filter.ToString()) :
+            "Merge";
     }
 }

@@ -16,7 +16,7 @@ namespace Cavern.Filters {
     /// <remarks>This filter is using the overlap and add method using FFTs, with non-thread-safe caches.
     /// For a thread-safe fast convolver, use <see cref="ThreadSafeFastConvolver"/>. This filter is also
     /// only for a single channel, use <see cref="MultichannelConvolver"/> for multichannel signals.</remarks>
-    public partial class FastConvolver : Filter, IConvolution, IDisposable, ILocalizableToString, IXmlSerializable {
+    public partial class FastConvolver : Filter, IConvolution, IDisposable, ILocalizableToString, IResettableFilter, IXmlSerializable {
         /// <inheritdoc/>
         [IgnoreDataMember]
         public int SampleRate { get; set; }
@@ -25,7 +25,17 @@ namespace Cavern.Filters {
         /// Get a clone of the <see cref="filter"/>'s impulse response.
         /// </summary>
         public float[] Impulse {
-            get => Measurements.GetRealPartHalf(filter.IFFT(cache)); // The setter doubles the length
+            get {
+                // The setter doubles the length, we halve it here
+                if (native != IntPtr.Zero) {
+                    int length = CavernAmp.FastConvolver_GetLength(native);
+                    float[] impulse = new float[length >> 1];
+                    CavernAmp.FastConvolver_GetFilter(native, impulse);
+                    return impulse;
+                }
+                return Measurements.GetRealPartHalf(filter.IFFT(cache));
+            }
+
             set {
                 Dispose();
                 if (CavernAmp.Available && CavernAmp.IsMono()) { // CavernAmp only improves performance when the runtime has no SIMD
@@ -150,6 +160,9 @@ namespace Cavern.Filters {
         /// Create the FFT cache used for accelerating the convolution in Fourier-space.
         /// </summary>
         public virtual FFTCache CreateCache(int fftSize) => new ThreadSafeFFTCache(fftSize);
+
+        /// <inheritdoc/>
+        public void Reset() => future.Clear();
 
         /// <summary>
         /// Apply convolution on an array of samples. One filter should be applied to only one continuous stream of samples.

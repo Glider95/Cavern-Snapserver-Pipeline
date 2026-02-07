@@ -13,22 +13,31 @@ public abstract class Command {
     public static Command[] CommandPool {
         get {
             commandPool ??= [
+                // Main commands
                 new HelpCommand(),
                 new InputCommand(),
                 new FormatCommand(),
                 new TargetCommand(),
                 new OutputCommand(),
+
+                // Auxiliary commands
+                new EffectCommand(),
+                new Force24BitCommand(),
+                new MatrixCommand(),
                 new MuteBedCommand(),
                 new MuteGroundCommand(),
-                new MatrixCommand(),
-                new CavernizeCommand(),
-                new EffectCommand(),
                 new SmoothnessCommand(),
                 new SpeakerVirtualizerCommand(),
+                new SurroundSwapCommand(),
+                new TracksCommand(),
+                new UpconvertCommand(),
 
                 // Hidden commands
+                new ExtractCommand(),
+                new HeightSqueezeCommand(),
+                new MLPPresentationCommand(),
                 new OverrideBedCommand(),
-                new RenderGain(),
+                new RenderGainCommand(),
                 new UnsafeCommand(),
             ];
             return commandPool;

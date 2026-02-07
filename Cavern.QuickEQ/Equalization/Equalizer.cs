@@ -29,7 +29,7 @@ namespace Cavern.QuickEQ.Equalization {
                 int nextBand = 0, prevBand = 0;
                 while (nextBand != bandCount && bands[nextBand].Frequency < frequency) {
                     prevBand = nextBand;
-                    ++nextBand;
+                    nextBand++;
                 }
                 if (nextBand != bandCount && nextBand != 0) {
                     double logFrom = Math.Log(bands[prevBand].Frequency),
@@ -108,7 +108,13 @@ namespace Cavern.QuickEQ.Equalization {
         /// <summary>
         /// Create a copy of this EQ with the same bands.
         /// </summary>
-        public object Clone() => new Equalizer(bands.ToList(), true);
+        public object Clone() {
+            Equalizer result = new Equalizer(bands.ToList(), true) {
+                subsonicFilter = subsonicFilter,
+                subsonicRolloff= subsonicRolloff,
+            };
+            return result;
+        }
 
         /// <summary>
         /// Add a new band to the EQ.
@@ -141,7 +147,7 @@ namespace Cavern.QuickEQ.Equalization {
             int start = bands.BinarySearch(first);
             if (start >= 0) {
                 bool recalculatePeak = false;
-                for (int i = 0; i < count; ++i) {
+                for (int i = 0; i < count; i++) {
                     if (bands[start + i].Gain == PeakGain) {
                         recalculatePeak = true;
                         break;
@@ -210,74 +216,17 @@ namespace Cavern.QuickEQ.Equalization {
         /// Calibrate this Equalizer with another: keep the frequencies and subtract the recording device's added gains.
         /// </summary>
         public void Calibrate(Equalizer with) {
-            for (int band = 0, bandc = bands.Count; band < bandc; ++band) {
+            for (int band = 0, bandc = bands.Count; band < bandc; band++) {
                 bands[band] = new Band(bands[band].Frequency, bands[band].Gain - with[bands[band].Frequency]);
             }
         }
 
-        /// <summary>
-        /// Merge this Equalizer with another, summing their gains.
-        /// </summary>
-        /// <remarks>For a faster version when both <see cref="Equalizer"/>s have the same bands, use
-        /// <see cref="AddCurve(Equalizer)"/> for optimization.</remarks>
-        public Equalizer Merge(Equalizer with) {
-            List<Band> output = new List<Band>();
-            for (int band = 0, bandc = bands.Count; band < bandc; ++band) {
-                output.Add(new Band(bands[band].Frequency, bands[band].Gain + with[bands[band].Frequency]));
+        /// <inheritdoc/>
+        public override string ToString() {
+            if (bands.Count == 0) {
+                return "Empty equalizer";
             }
-            for (int band = 0, bandc = with.bands.Count; band < bandc; ++band) {
-                output.Add(new Band(with.bands[band].Frequency, with.bands[band].Gain + this[with.bands[band].Frequency]));
-            }
-            output.Sort();
-            return new Equalizer(output.Distinct().ToList(), true);
-        }
-
-        /// <summary>
-        /// Remove correction from spectrum vallies that are most likely measurement errors or uncorrectable room modes.
-        /// The maximum gain increase is 6 dB, any band that needs more than this is considered a valley.
-        /// </summary>
-        public void ValleyCorrection(float[] curve, EQCurve targetEQ, double startFreq, double stopFreq, float targetGain) =>
-            ValleyCorrection(curve, targetEQ, startFreq, stopFreq, targetGain, 6);
-
-        /// <summary>
-        /// Remove correction from spectrum vallies that are most likely measurement errors or uncorrectable room modes.
-        /// The maximum gain increase is defined in the <paramref name="maxGain"/> parameter in decibels,
-        /// anyt band that needs more than this is considered a valley.
-        /// </summary>
-        public void ValleyCorrection(float[] curve, EQCurve targetEQ, double startFreq, double stopFreq, float targetGain, float maxGain) {
-            int start = 0, end = curve.Length - 1;
-            float[] target = targetEQ.GenerateLogCurve(startFreq, stopFreq, curve.Length, targetGain);
-            while (start < end && target[start] > curve[start] + maxGain) {
-                ++start; // find low extension
-            }
-            while (start < end && target[end] > curve[end] + maxGain) {
-                --end; // find high extension
-            }
-            double startPow = Math.Log10(startFreq), powRange = (Math.Log10(stopFreq) - startPow) / curve.Length;
-            for (int i = start; i <= end; ++i) {
-                if (target[i] > curve[i] + maxGain) {
-                    start = i;
-                    while (start != 0 && curve[start] < target[start]) {
-                        --start;
-                    }
-                    double firstFreq = Math.Pow(10, startPow + powRange * start);
-                    while (i < end && curve[i] < target[i]) {
-                        ++i;
-                    }
-                    double endFreq = Math.Pow(10, startPow + powRange * i) * 1.01;
-                    for (int band = 0, bandc = bands.Count; band < bandc; ++band) {
-                        double bandFreq = bands[band].Frequency;
-                        if (bandFreq < firstFreq) {
-                            continue;
-                        }
-                        if (bandFreq > endFreq) {
-                            break;
-                        }
-                        RemoveBand(bands[band--]);
-                        --bandc;
-                    }
-                }
-            }
+            return $"Equalizer with {bands.Count} bands ({StartFrequency:0}-{EndFrequency:0} Hz), peak: {PeakGain:0.00} dB";
         }
 
         /// <summary>
@@ -307,7 +256,7 @@ namespace Cavern.QuickEQ.Equalization {
                 return;
             }
             PeakGain = bands[0].Gain;
-            for (int band = 1, count = bands.Count; band < count; ++band) {
+            for (int band = 1, count = bands.Count; band < count; band++) {
                 if (PeakGain < bands[band].Gain) {
                     PeakGain = bands[band].Gain;
                 }

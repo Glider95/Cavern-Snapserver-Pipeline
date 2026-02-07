@@ -92,6 +92,10 @@ namespace Cavern.Format.FilterSet {
         /// </summary>
         MonolithHTP1,
         /// <summary>
+        /// Rotel devices.
+        /// </summary>
+        Rotel,
+        /// <summary>
         /// Sony ES-series AVRs.
         /// </summary>
         SonyES,
@@ -152,6 +156,10 @@ namespace Cavern.Format.FilterSet {
         /// </summary>
         MultEQXTarget,
         /// <summary>
+        /// Audyssey MultEQ XT32 configuration (.ady).
+        /// </summary>
+        MultEQXT32,
+        /// <summary>
         /// Yamaha RX-A series AVRs.
         /// </summary>
         YamahaRXA,
@@ -167,6 +175,10 @@ namespace Cavern.Format.FilterSet {
         // -------------------------------------------------------------------------
         // Others ------------------------------------------------------------------
         // -------------------------------------------------------------------------
+        /// <summary>
+        /// Traditional 10-band graphic equalizer.
+        /// </summary>
+        Multiband10,
         /// <summary>
         /// Traditional 31-band graphic equalizer.
         /// </summary>
@@ -213,6 +225,7 @@ namespace Cavern.Format.FilterSet {
             FilterSetTarget.AcurusMuse => "Acurus Muse",
             FilterSetTarget.Emotiva => "Emotiva",
             FilterSetTarget.MonolithHTP1 => "Monoprice Monolith HTP-1",
+            FilterSetTarget.Rotel => "Rotel",
             FilterSetTarget.SonyES => "Sony ES series",
             FilterSetTarget.StormAudio => "StormAudio",
             FilterSetTarget.TonewinnerAT => "Tonewinner AT series",
@@ -225,9 +238,11 @@ namespace Cavern.Format.FilterSet {
             FilterSetTarget.MultEQX => "MultEQ-X - MQX file",
             FilterSetTarget.MultEQXRaw => "MultEQ-X - peaking EQ",
             FilterSetTarget.MultEQXTarget => "MultEQ-X - filter curves",
+            FilterSetTarget.MultEQXT32 => "MultEQ XT32",
             FilterSetTarget.YamahaRXA => "Yamaha RX-A series",
             FilterSetTarget.YPAO => "Yamaha RX series",
             FilterSetTarget.YPAOLite => "Yamaha CX-A series",
+            FilterSetTarget.Multiband10 => "10-band graphic EQ",
             FilterSetTarget.Multiband31 => "31-band graphic EQ",
             FilterSetTarget.Roon => "Roon",
             FilterSetTarget.Wavelet => "Wavelet",

@@ -1,4 +1,6 @@
-﻿using Cavern.Format;
+﻿#define SKIP_TRACKS_WITH_ERRORS
+
+using Cavern.Format;
 using Cavern.Format.Common;
 using Cavern.Format.Container;
 
@@ -114,7 +116,7 @@ public class AudioFile : IDisposable {
     /// Free up resources.
     /// </summary>
     public void Dispose() {
-        for (int i = 0; i < tracks.Count; ++i) {
+        for (int i = 0; i < tracks.Count; i++) {
             tracks[i].Dispose();
         }
         GC.SuppressFinalize(this);
@@ -142,12 +144,12 @@ public class AudioFile : IDisposable {
         int trackId = 0;
         for (int i = 0; i < reader.Tracks.Length; i++) {
             if (reader.Tracks[i].Extra is TrackExtraAudio) {
-#if RELEASE
+#if RELEASE || SKIP_TRACKS_WITH_ERRORS
                 try {
 #endif
                     tracks.Add(new CavernizeTrack(new AudioTrackReader(reader.Tracks[i]), reader.Tracks[i].Format,
                         trackId, language, reader.Tracks[i].Language));
-#if RELEASE
+#if RELEASE || SKIP_TRACKS_WITH_ERRORS
                 } catch (Exception e) {
                     tracks.Add(new InvalidTrack(e.Message, reader.Tracks[i].Format, reader.Tracks[i].Language, language));
                 }

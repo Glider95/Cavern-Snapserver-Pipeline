@@ -46,12 +46,13 @@ namespace Cavern.QuickEQ {
                 splitter = 0;
             }
             if (left != Window.Disabled) {
-                Array.Clear(samples, 0, start);
+                Array.Clear(samples, 0, Math.Max(start, 0));
                 ApplyHalfWindow(samples, channels, start, splitter, left);
             }
             if (right != Window.Disabled) {
-                ApplyHalfWindow(samples, channels, end, splitter, right);
-                Array.Clear(samples, end, samples.Length - end);
+                int safeEnd = Math.Clamp(end, 0, samples.Length);
+                ApplyHalfWindow(samples, channels, safeEnd, splitter, right);
+                Array.Clear(samples, safeEnd, samples.Length - safeEnd);
             }
         }
 
@@ -63,10 +64,17 @@ namespace Cavern.QuickEQ {
             if (from < 0) {
                 from = 0;
             }
+            if (from > samples.Length) {
+                from = samples.Length;
+            }
+            if (to < 0) {
+                to = 0;
+            }
             if (to > samples.Length) {
                 to = samples.Length;
             }
-            WindowFunction fptr = GetWindowFunction(function);
+
+            WindowFunction windower = GetWindowFunction(function);
             float offset = 0;
             if (from > to) {
                 (from, to) = (to, from);
@@ -75,7 +83,7 @@ namespace Cavern.QuickEQ {
             float step = channels * MathF.PI / (to - from);
             for (int channel = 0; channel < channels; channel++) {
                 for (int sample = from + channel; sample < to; sample += channels) {
-                    samples[sample] *= fptr(offset);
+                    samples[sample] *= windower(offset);
                     offset += step;
                 }
             }

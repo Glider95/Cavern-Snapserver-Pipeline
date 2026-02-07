@@ -13,7 +13,7 @@ namespace Cavern.Format.ConfigurationFile {
     /// <summary>
     /// Full parsed setup of a freely configurable system-wide equalizer or audio processor software.
     /// </summary>
-    public abstract class ConfigurationFile : IExportable {
+    public abstract partial class ConfigurationFile : IExportable {
         /// <summary>
         /// Root nodes of each channel, start attaching their filters as a children chain. These nodes must contain
         /// <see cref="InputChannel"/> filters.
@@ -24,80 +24,38 @@ namespace Cavern.Format.ConfigurationFile {
         /// Named points where the configuration file can be separated to new sections. Split points only consist of input nodes after the
         /// previous split point's output nodes.
         /// </summary>
-        public IReadOnlyList<(string name, FilterGraphNode[] roots)> SplitPoints => splitPoints;
+        public IReadOnlyList<SplitPoint> SplitPoints => splitPoints;
 
         /// <summary>
         /// Named points where the configuration file can be separated to new sections. Split points only consist of input nodes after the
         /// previous split point's output nodes.
         /// </summary>
-        readonly List<(string name, FilterGraphNode[] roots)> splitPoints;
+        readonly List<SplitPoint> splitPoints;
 
         /// <inheritdoc/>
         public abstract string FileExtension { get; }
 
         /// <summary>
-        /// Copy constructor from any <paramref name="other"/> configuration file.
+        /// Recursive part of the <see cref="Optimize()"/> function.
         /// </summary>
-        protected ConfigurationFile(ConfigurationFile other) {
-            Dictionary<FilterGraphNode, FilterGraphNode> mapping = other.InputChannels.GetItem2s().DeepCopyWithMapping().mapping;
-            InputChannels = other.InputChannels.Select(x => (x.name, mapping[x.root])).ToArray();
-            splitPoints = other.SplitPoints.Select(x => (x.name, x.roots.Select(x => mapping[x]).ToArray())).ToList();
-        }
-
-        /// <summary>
-        /// Construct a configuration file from a complete filter graph, including splitting to <paramref name="splitPoints"/>.
-        /// </summary>
-        /// <remarks>It's mandatory to have the corresponding output channels to close the split point. Refer to the constructors of
-        /// <see cref="CavernFilterStudioConfigurationFile"/> for how to add closing <see cref="OutputChannel"/>s.</remarks>
-        protected ConfigurationFile(List<(string name, FilterGraphNode[] roots)> splitPoints) {
-            InputChannels = splitPoints[0].roots.Select(x => (((InputChannel)x.Filter).Channel.GetShortName(), x)).ToArray();
-            this.splitPoints = splitPoints;
-        }
-
-        /// <summary>
-        /// Construct a configuration file from a complete filter graph, with references to its <paramref name="inputChannels"/>.
-        /// </summary>
-        /// <remarks>It's mandatory to have the corresponding output channels to close the split point. Refer to the constructors of
-        /// <see cref="CavernFilterStudioConfigurationFile"/> for how to add closing <see cref="OutputChannel"/>s.</remarks>
-        protected ConfigurationFile(string name, (string name, FilterGraphNode root)[] inputChannels) {
-            InputChannels = inputChannels;
-            splitPoints = new List<(string, FilterGraphNode[])> {
-                (name, InputChannels.GetItem2s())
-            };
-        }
-
-        /// <summary>
-        /// Create an empty configuration file with the passed input channels.
-        /// </summary>
-        /// <remarks>It's mandatory to have the corresponding output channels to close the split point. It's not done here as there might
-        /// be an initial configuration. Refer to the code of <see cref="CavernFilterStudioConfigurationFile(string, ReferenceChannel[])"/>
-        /// for how to add closing <see cref="OutputChannel"/>s.</remarks>
-        protected ConfigurationFile(string name, ReferenceChannel[] inputs) {
-            InputChannels = new (string name, FilterGraphNode root)[inputs.Length];
-            for (int i = 0; i < inputs.Length; i++) {
-                InputChannels[i] = (inputs[i].GetShortName(), new FilterGraphNode(new InputChannel(inputs[i])));
+        /// <returns>Optimization was done and the children of the passed <paramref name="node"/> was modified.
+        /// This means the currently processed element was removed and new were added, so the loop counter shouldn't increase
+        /// in the iteration where this function was called from.</returns>
+        static bool Optimize(FilterGraphNode node) {
+            bool optimized = false;
+            if (node.Filter == null) {
+                node.DetachFromGraph();
+                optimized = true;
             }
 
-            splitPoints = new List<(string, FilterGraphNode[])> {
-                (name, InputChannels.GetItem2s())
-            };
-        }
-
-        /// <summary>
-        /// Create an empty configuration file with the passed input channel names/labels.
-        /// </summary>
-        /// <remarks>It's mandatory to have the corresponding output channels to close the split point. It's not done here as there might
-        /// be an initial configuration. Refer to the code of <see cref="EqualizerAPOConfigurationFile(string, int)"/> for how to implement
-        /// addition and finishing up with closing <see cref="OutputChannel"/>s.</remarks>
-        protected ConfigurationFile(string name, string[] inputs) {
-            InputChannels = new (string name, FilterGraphNode root)[inputs.Length];
-            for (int i = 0; i < inputs.Length; i++) {
-                InputChannels[i] = (inputs[i], new FilterGraphNode(new InputChannel(inputs[i])));
+            IReadOnlyList<FilterGraphNode> children = node.Children;
+            for (int i = 0, c = children.Count; i < c; i++) {
+                if (Optimize(children[i])) {
+                    optimized = true;
+                    i--;
+                }
             }
-
-            splitPoints = new List<(string, FilterGraphNode[])> {
-                (name, InputChannels.GetItem2s())
-            };
+            return optimized;
         }
 
         /// <summary>
@@ -110,87 +68,6 @@ namespace Cavern.Format.ConfigurationFile {
         /// </list>
         /// </summary>
         public abstract void Export(string path);
-
-        /// <summary>
-        /// Add a new split with a custom <paramref name="name"/> at a specific <paramref name="index"/> of <see cref="SplitPoints"/>.
-        /// </summary>
-        public void AddSplitPoint(int index, string name) {
-            if (index != SplitPoints.Count) {
-                FilterGraphNode[] start = (FilterGraphNode[])splitPoints[index].roots.Clone();
-                for (int i = 0; i < start.Length; i++) {
-                    ReferenceChannel channel = ((InputChannel)start[i].Filter).Channel;
-                    start[i] = start[i].AddAfterParents(new OutputChannel(channel)).AddAfterParents(new InputChannel(channel));
-                }
-                splitPoints.Insert(index, (name, start));
-            } else {
-                CreateNewSplitPoint(name);
-                FilterGraphNode[] end = SplitPoints[^1].roots;
-                for (int i = 0; i < end.Length; i++) {
-                    ReferenceChannel channel = ((InputChannel)end[i].Filter).Channel;
-                    end[i].AddChild(new OutputChannel(channel));
-                }
-            }
-        }
-
-        /// <summary>
-        /// Clears all filters in one of the <see cref="SplitPoints"/> by <paramref name="index"/>.
-        /// </summary>
-        public void ClearSplitPoint(int index) {
-            if (index == SplitPoints.Count - 1) { // Last split can be cleared and replaced with new outputs
-                FilterGraphNode[] roots = SplitPoints[index].roots;
-                for (int i = 0; i < roots.Length; i++) {
-                    roots[i].DetachChildren();
-                    roots[i].AddChild(new OutputChannel(((InputChannel)roots[i].Filter).Channel));
-                }
-            } else { // General case: clear the children and use the next split to fetch the outputs
-                FilterGraphNode[] roots = SplitPoints[index].roots,
-                    next = SplitPoints[index + 1].roots;
-                for (int i = 0; i < roots.Length; i++) {
-                    ReferenceChannel channel = ((InputChannel)roots[i].Filter).Channel;
-                    FilterGraphNode equivalent = next.First(x => ((InputChannel)x.Filter).Channel == channel);
-
-                    roots[i].DetachChildren();
-                    equivalent.Parents[0].DetachParents();
-                    roots[i].AddChild(equivalent.Parents[0]);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Merge the filters of the split point at the given <paramref name="index"/> and the next one.
-        /// </summary>
-        public void MergeSplitPointWithNext(int index) {
-            FilterGraphNode[] roots = SplitPoints[index + 1].roots;
-            for (int j = 0; j < roots.Length; j++) {
-                roots[j].Parents[0].DetachFromGraph(); // Output of the split at the index
-                roots[j].DetachFromGraph(); // Input of the split at index + 1
-            }
-            splitPoints.RemoveAt(index + 1);
-        }
-
-        /// <summary>
-        /// Remove any splits, leave only one continuous graph of filters.
-        /// </summary>
-        public void MergeSplitPoints() {
-            int c = SplitPoints.Count;
-            if (c <= 1) {
-                return;
-            }
-
-            for (int i = 1; i < c; i++) {
-                FilterGraphNode[] roots = SplitPoints[i].roots;
-                for (int j = 0; j < roots.Length; j++) {
-                    roots[j].Parents[0].DetachFromGraph(); // Output of the previous split
-                    roots[j].DetachFromGraph(); // Input of the current split
-                }
-            }
-            splitPoints.RemoveRange(1, SplitPoints.Count - 1);
-        }
-
-        /// <summary>
-        /// Change the <paramref name="name"/> of an existing split point at a given <paramref name="index"/>.
-        /// </summary>
-        public void RenameSplitPoint(int index, string name) => splitPoints[index] = (name, splitPoints[index].roots);
 
         /// <summary>
         /// Get the index of a given <paramref name="channel"/> in the configuration. This is the input and output it's wired to.
@@ -213,71 +90,16 @@ namespace Cavern.Format.ConfigurationFile {
         }
 
         /// <summary>
-        /// Get the node for a split point's (referenced with an <paramref name="index"/>) given <paramref name="channel"/>.
+        /// Remove as many merge nodes (null filters) as possible.
         /// </summary>
-        public FilterGraphNode GetSplitPointRoot(int index, ReferenceChannel channel) {
-            FilterGraphNode[] roots = SplitPoints[index].roots;
-            for (int i = 0; i < roots.Length; i++) {
-                if (((InputChannel)roots[i].Filter).Channel == channel) {
-                    return roots[i];
+        public void Optimize() {
+            for (int i = 0; i < InputChannels.Length; i++) {
+                IReadOnlyList<FilterGraphNode> children = InputChannels[i].root.Children;
+                for (int j = 0, c = children.Count; j < c;) {
+                    if (!Optimize(children[j])) {
+                        j++;
+                    }
                 }
-            }
-            throw new InvalidChannelException(new[] { channel });
-        }
-
-        /// <summary>
-        /// Removes one of the <see cref="SplitPoints"/> by <paramref name="index"/> and clears all the filters it contains.
-        /// </summary>
-        /// <exception cref="IndexOutOfRangeException">The last split point can't be removed. To bypass this restriction,
-        /// you could add an empty split point and remove the previous last one.</exception>
-        public void RemoveSplitPoint(int index) {
-            if (SplitPoints.Count == 1) {
-                throw new IndexOutOfRangeException();
-            }
-
-            if (index == SplitPoints.Count - 1) { // Last split can be just removed
-                FilterGraphNode[] roots = SplitPoints[index].roots;
-                for (int i = 0; i < roots.Length; i++) {
-                    roots[i].DetachFromGraph(false);
-                }
-            } else { // General case: transfer children from the next set of roots, then swap roots
-                FilterGraphNode[] roots = SplitPoints[index].roots,
-                    next = SplitPoints[index + 1].roots;
-                for (int i = 0; i < roots.Length; i++) {
-                    ReferenceChannel channel = ((InputChannel)roots[i].Filter).Channel;
-                    FilterGraphNode equivalent = next.First(x => ((InputChannel)x.Filter).Channel == channel);
-
-                    roots[i].DetachChildren();
-                    FilterGraphNode[] oldChildren = equivalent.Children.ToArray();
-                    equivalent.DetachChildren();
-                    roots[i].AddChildren(oldChildren);
-                }
-                splitPoints[index + 1] = (SplitPoints[index + 1].name, roots);
-            }
-            splitPoints.RemoveAt(index);
-        }
-
-        /// <summary>
-        /// Adds an entry to the <see cref="SplitPoints"/> with the current state of the configuration, creating new
-        /// <see cref="InputChannel"/>s after each existing <see cref="OutputChannel"/>.
-        /// </summary>
-        /// <remarks>If you keep track of your currently handled output nodes, set them to their children,
-        /// because new input nodes are created in this function.</remarks>
-        protected void CreateNewSplitPoint(string name) {
-            FilterGraphNode[] nodes = InputChannels.Select(x => x.root).MapGraph()
-                .Where(x => x.Filter is OutputChannel && x.Children.Count == 0).ToArray();
-            for (int i = 0; i < nodes.Length; i++) {
-                nodes[i] = nodes[i].AddChild(new InputChannel(((OutputChannel)nodes[i].Filter).Channel));
-            }
-            splitPoints.Add((name, nodes));
-        }
-
-        /// <summary>
-        /// Add the neccessary <see cref="OutputChannel"/> entries for an empty configuration file.
-        /// </summary>
-        protected void FinishEmpty(ReferenceChannel[] channels) {
-            for (int i = 0; i < channels.Length; i++) {
-                InputChannels[i].root.AddChild(new FilterGraphNode(new OutputChannel(channels[i])));
             }
         }
 
@@ -286,7 +108,7 @@ namespace Cavern.Format.ConfigurationFile {
         /// </summary>
         protected void FinishLazySetup(int fftCacheSize) {
             using FFTCachePool pool = new FFTCachePool(fftCacheSize);
-            FilterGraphNode[] nodes = InputChannels.Select(x => x.root).MapGraph().Where(x => x.Filter is ILazyLoadableFilter).ToArray();
+            FilterGraphNode[] nodes = SplitPoints[0].Roots.MapGraph().Where(x => x.Filter is ILazyLoadableFilter).ToArray();
             Parallelizer.ForUnchecked(0, nodes.Length, i => {
                 nodes[i].Filter = ((ILazyLoadableFilter)nodes[i].Filter).CreateFilter(pool);
             });
@@ -319,7 +141,7 @@ namespace Cavern.Format.ConfigurationFile {
                 result[i] = (source, channelIndex);
             }
 
-            result.OptimizeChannelUse();
+            OptimizeChannelUse(result);
             return result;
         }
 
@@ -343,42 +165,5 @@ namespace Cavern.Format.ConfigurationFile {
         /// </summary>
         protected int[] GetExportedParents((FilterGraphNode node, int channel)[] exportOrder, int index) =>
             GetExportedParentIndices(exportOrder, index).Select(x => exportOrder[x].channel).ToArray();
-
-        /// <summary>
-        /// Remove as many merge nodes (null filters) as possible.
-        /// </summary>
-        protected void Optimize() {
-            /// <summary>
-            /// Recursive part of this function.
-            /// </summary>
-            /// <returns>Optimization was done and the children of the passed <paramref name="node"/> was modified.
-            /// This means the currently processed element was removed and new were added, so the loop counter shouldn't increase
-            /// in the iteration where this function was called from.</returns>
-            static bool Optimize(FilterGraphNode node) {
-                bool optimized = false;
-                if (node.Filter == null) {
-                    node.DetachFromGraph();
-                    optimized = true;
-                }
-
-                IReadOnlyList<FilterGraphNode> children = node.Children;
-                for (int i = 0, c = children.Count; i < c; i++) {
-                    if (Optimize(children[i])) {
-                        optimized = true;
-                        i--;
-                    }
-                }
-                return optimized;
-            }
-
-            for (int i = 0; i < InputChannels.Length; i++) {
-                IReadOnlyList<FilterGraphNode> children = InputChannels[i].root.Children;
-                for (int j = 0, c = children.Count; j < c;) {
-                    if (!Optimize(children[j])) {
-                        j++;
-                    }
-                }
-            }
-        }
     }
 }

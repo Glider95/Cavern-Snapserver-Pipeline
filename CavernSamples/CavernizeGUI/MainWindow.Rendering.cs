@@ -1,10 +1,7 @@
 ﻿using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
 using System.IO;
 
-using Cavern;
-using Cavern.Channels;
 using Cavern.Format;
 using Cavern.Format.Common;
 using Cavern.Format.Container;
@@ -22,9 +19,6 @@ using CavernizeGUI.Resources;
 
 namespace CavernizeGUI {
     partial class MainWindow {
-        /// <inheritdoc/>
-        public float RenderGain { get; set; } = 1;
-
         /// <summary>
         /// Total number of samples for all channels that will be written to the file at once.
         /// </summary>
@@ -52,30 +46,22 @@ namespace CavernizeGUI {
             }
 
             try {
-                SoftPreRender();
+                AttachToListener();
             } catch (OverMaxChannelsException e) {
                 throw new TrackException(string.Format((string)language["ChCnt"], e.Channels, e.MaxChannels));
             }
         }
 
         /// <summary>
-        /// Prepare the renderer for export, without safety checks.
+        /// Attach the track to the environment and perform compatibility checks.
         /// </summary>
-        void SoftPreRender() {
-            CavernizeTrack track = (CavernizeTrack)tracks.SelectedItem;
+        void AttachToListener() {
             try {
-                environment.AttachToListener(track, Settings.Default.surroundSwap);
+                environment.AttachToListener((CavernizeTrack)tracks.SelectedItem);
             } catch (NonGroundChannelPresentException) {
                 throw new NonGroundChannelPresentException((string)language["SpViE"]);
-            }
-
-            if (RenderTarget is VirtualizerRenderTarget) {
-                if (roomCorrection != null && roomCorrectionSampleRate != VirtualizerFilter.FilterSampleRate) {
-                    throw new IncompatibleSettingsException((string)language["FiltC"]);
-                }
-                environment.Listener.SampleRate = VirtualizerFilter.FilterSampleRate;
-            } else {
-                environment.Listener.SampleRate = roomCorrection == null ? track.SampleRate : roomCorrectionSampleRate;
+            } catch (SampleRateMismatchException) {
+                throw new IncompatibleSettingsException((string)language["FiltC"]);
             }
         }
 
@@ -86,12 +72,12 @@ namespace CavernizeGUI {
         Action Render(string path) {
             CavernizeTrack target = (CavernizeTrack)tracks.SelectedItem;
             Codec codec = ((ExportFormat)audio.SelectedItem).Codec;
-            BitDepth bits = codec == Codec.PCM_Float ? BitDepth.Float32 : force24Bit.IsChecked ? BitDepth.Int24 : BitDepth.Int16;
+            BitDepth bits = codec == Codec.PCM_Float ? BitDepth.Float32 : Settings.Default.force24Bit ? BitDepth.Int24 : BitDepth.Int16;
             if (!codec.IsEnvironmental()) {
                 SetBlockSize(RenderTarget);
                 string exportFormat = path[^4..].ToLowerInvariant();
                 bool mkvTarget = exportFormat.Equals(".mkv");
-                string exportName = mkvTarget || exportFormat.Equals(".ac3") || exportFormat.Equals(".ec3") ?
+                string exportName = mkvTarget || exportFormat.IsNative() ?
                     path[..^4] + waveExtension :
                     path;
                 int channelCount = RenderTarget.OutputChannels;
@@ -199,7 +185,7 @@ namespace CavernizeGUI {
         /// </summary>
         void SetBlockSize(RenderTarget target) {
             int updateRate = environment.Listener.UpdateRate;
-            blockSize = FiltersUsed ? roomCorrection[0].Length : defaultWriteCacheLength;
+            blockSize = environment.RoomCorrectionUsed ? environment.RoomCorrection.Samples : defaultWriteCacheLength;
             if (blockSize < updateRate) {
                 blockSize = updateRate;
             } else if (blockSize % updateRate != 0) {
@@ -216,7 +202,12 @@ namespace CavernizeGUI {
             LicenceWindow licenceWindow = Dispatcher.Invoke(() => new LicenceWindow());
             ExternalConverterHandler external = new(target, Consts.Language.GetExternalConverterStrings(), licenceWindow,
                 taskEngine.UpdateProgressBar, taskEngine.UpdateStatus, Dispatcher.Invoke);
-            external.Attach(environment.Listener, new DynamicUpmixingSettings(), keepFirstSources);
+            Dispatcher.Invoke(licenceWindow.Close);
+            if (external.Failed) {
+                Dispatcher.Invoke(() => Error(status.Text));
+            } else {
+                external.Attach(environment.Listener, new DynamicUpmixingSettings(), keepFirstSources);
+            }
             return external;
         }
 
@@ -241,11 +232,12 @@ namespace CavernizeGUI {
             if (writer is RIFFWaveWriter && finalName[^4..] != waveExtension) {
                 taskEngine.UpdateStatus("Merging to final container...");
                 string exportedAudio = finalName[..^4] + waveExtension;
-                MergeToContainer merger = new(file.Path, exportedAudio, targetCodec);
+                MergeToContainer merger = new(LoadedFile.Path, exportedAudio, targetCodec);
                 merger.SetTrackName($"Cavern {renderTargetRef.Name} render");
                 if (writer.ChannelCount > 8) {
                     merger.Allow8PlusChannels();
                 }
+                merger.MakeSafe(finalName);
                 if (!merger.Merge(ffmpeg, finalName)) {
                     taskEngine.UpdateStatus("Failed to create the final file. Are your permissions sufficient in the export folder?");
                     external.Dispose();

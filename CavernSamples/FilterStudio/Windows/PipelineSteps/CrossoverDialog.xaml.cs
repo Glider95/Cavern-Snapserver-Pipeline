@@ -14,14 +14,14 @@ namespace FilterStudio.Windows.PipelineSteps {
         /// <summary>
         /// The frequencies where each channel's crossover is set or null if a channel's crossover is disabled.
         /// </summary>
-        public (ReferenceChannel channel, int? frequency)[] Crossovers {
+        public CrossoverDescription Description {
             get {
-                (ReferenceChannel, int?)[] result = new (ReferenceChannel, int?)[channels.Items.Count];
-                for (int i = 0; i < result.Length; i++) {
+                (bool mixHere, float crossoverFreq)[] mixing = new (bool, float)[channels.Items.Count];
+                for (int i = 0; i < mixing.Length; i++) {
                     CrossoverSetup setup = (CrossoverSetup)channels.Items[i];
-                    result[i] = (setup.Channel, setup.Frequency);
+                    mixing[i] = (setup.Channel == Target, setup.Frequency ?? 0);
                 }
-                return result;
+                return new CrossoverDescription(mixing);
             }
         }
 
@@ -49,7 +49,9 @@ namespace FilterStudio.Windows.PipelineSteps {
             for (int i = 0; i < filterSetChannels.Length; i++) {
                 channels.Items.Add(new CrossoverSetup(filterSetChannels[i]));
             }
-            crossoverType.ItemsSource = ((CrossoverType[])Enum.GetValues(typeof(CrossoverType))).Select(x => new CrossoverTypeOnUI(x));
+            crossoverType.ItemsSource = ((CrossoverType[])Enum.GetValues(typeof(CrossoverType)))
+                .Skip(1) // Remove "Disabled"
+                .Select(x => new CrossoverTypeOnUI(x));
             crossoverType.SelectedIndex = 0;
             targetChannel.ItemsSource = filterSetChannels.Select(x => new ChannelOnUI(x));
             int lfeIndex = Array.IndexOf(filterSetChannels, ReferenceChannel.ScreenLFE);

@@ -42,7 +42,15 @@ namespace Cavern.Format.ConfigurationFile {
             SampleRate = sampleRate;
             MergeSplitPoints();
             Optimize();
-            SplitPoints[0].roots.ConvertToConvolution(sampleRate, convolutionLength);
+            SplitPoints[0].Roots.ConvertToConvolution(sampleRate, convolutionLength);
+        }
+
+        /// <summary>
+        /// Create an empty file for a custom channel count.
+        /// </summary>
+        public ConvolutionBoxFormatConfigurationFile(string name, int sampleRate, int channelCount) : base(name, channelCount) {
+            SampleRate = sampleRate;
+            FinishEmpty();
         }
 
         /// <summary>
@@ -67,7 +75,7 @@ namespace Cavern.Format.ConfigurationFile {
         /// <summary>
         /// Parses a Convolution Box Format file to a filter graph, returns its root nodes.
         /// </summary>
-        /// <remarks>Merge nodes can be created, calling <see cref="ConfigurationFile.Optimize"/> is recommended.</remarks>
+        /// <remarks>Merge nodes can be created, calling <see cref="ConfigurationFile.Optimize()"/> is recommended.</remarks>
         static (string, FilterGraphNode)[] Parse(string path) {
             using FileStream stream = File.OpenRead(path);
             if (stream.ReadInt32() != syncWord) {
@@ -125,7 +133,7 @@ namespace Cavern.Format.ConfigurationFile {
             inputChannels.Sort((a, b) => a.index.CompareTo(b.index));
             foreach (KeyValuePair<int, FilterGraphNode> node in lastNodes) {
                 if (node.Key >= 0) {
-                    OutputChannel outputFilter = new OutputChannel(((InputChannel)inputChannels[node.Key].root.Filter).ChannelName);
+                    OutputChannel outputFilter = new OutputChannel((InputChannel)inputChannels[node.Key].root.Filter);
                     if (node.Value.Filter == null && node.Value.Children.Count == 0) { // Only overwrite dead ends with outputs
                         node.Value.Filter = outputFilter;
                     } else {
@@ -175,7 +183,7 @@ namespace Cavern.Format.ConfigurationFile {
         /// Throw an <see cref="UnsupportedFilterForExportException"/> if it's not a convolution or a merge point.
         /// </summary>
         void ValidateForExport() {
-            foreach (FilterGraphNode node in SplitPoints[0].roots.MapGraph()) {
+            foreach (FilterGraphNode node in SplitPoints[0].Roots.MapGraph()) {
                 if (!(node.Filter is BypassFilter) && !(node.Filter is Convolver) && !(node.Filter is FastConvolver)) {
                     throw new UnsupportedFilterException(node.Filter);
                 }

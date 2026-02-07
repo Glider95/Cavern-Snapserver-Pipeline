@@ -3,7 +3,7 @@
                     xmlns:system="clr-namespace:System;assembly=mscorlib">
     <!-- UI -->
     <system:String x:Key="MenuR">Renderelés</system:String>
-    <system:String x:Key="Upmix">_Felkeverési beállítások</system:String>
+    <system:String x:Key="Upmix">_Felkeverési beállítások...</system:String>
     <system:String x:Key="LoadV">HRTF/HRIR szettek betöltése a _Virtualizálóba</system:String>
     <system:String x:Key="SpVir">_Magasság virtualizálása hangszórókon</system:String>
     <system:String x:Key="FiltH">Kimeneti _szűrők alkalmazása</system:String>
@@ -16,7 +16,7 @@
     <system:String x:Key="For24">24-bites _PCM erőltetése (lassabb, nagyobb fájlok, nem ad hallható javulást)</system:String>
     <system:String x:Key="SuSwa">_Oldalsó/hátsó kimeneti csatornák felcserélése</system:String>
     <system:String x:Key="WavCh">RIFF WAVE csatornamaszk kihagyása (korlátozások feloldása)</system:String>
-    <system:String x:Key="SMetH">Metaadatok mutatása</system:String>
+    <system:String x:Key="SMetH">Metaadatok mutatása...</system:String>
     <system:String x:Key="SMetT">Megmutatja a dekódolt kodekspecifikus mezőit a kiválasztott sávnak.</system:String>
     <system:String x:Key="ReMoH">_Csak jelentés mód</system:String>
     <system:String x:Key="ReMoT">Hogy ellenőrizd, hogy egy tartalom tényleg objektumalapú-e vagy sem, engedélyezd ezt az opciót, és a renderelés utáni
@@ -24,7 +24,7 @@
     <system:String x:Key="DeGrH">Minőséganalízis és osztályozás</system:String>
     <system:String x:Key="DeGrT">Érzékelhető hangminőségi metrikák mérése és a tartalom osztályozása. Ezt az információt a renderelés utáni
         jelentés fogja tartalmazni.</system:String>
-    <system:String x:Key="PReSh">_Renderelés utáni jelentés megnyitása</system:String>
+    <system:String x:Key="PReSh">_Renderelés utáni jelentés megnyitása...</system:String>
     <system:String x:Key="PReRe">Renderelés utáni jelentés</system:String>
     <system:String x:Key="MenuH">Súgó</system:String>
     <system:String x:Key="UsrGu">_Felhasználói kézikönyv (angol)</system:String>
@@ -100,7 +100,7 @@
     <system:String x:Key="CMeET">Légy szíves, előbb tölts be egy fájlt.</system:String>
     <system:String x:Key="CMeUT">A Cavern API még nem támogatja a kiválasztott sáv metaadatainak megjelenítését.</system:String>
     <system:String x:Key="JocWa">A fájl néhány részét ritka JOC-ban kódolták. Az E-AC-3 szabványnak ezen része nincs helyesen
-        dokumentálva, emiatt kis torzítások várhatók a hangban.</system:String>
+        dokumentálva, emiatt rövid némítások várhatók a hangban.</system:String>
     <system:String x:Key="RenEr">A hang nem renderelhető a következő ponton: {0}. A feldolgozás folytatódik, de a sáv
         nem marad összefüggő ezután az idő után. A pontos hiba: {1}</system:String>
     <system:String x:Key="SpViE">A jelenlegi kiosztás nem támogatja magasság virtualizálását hangszórókon. Kapcsold ki ezt az opciót, vagy

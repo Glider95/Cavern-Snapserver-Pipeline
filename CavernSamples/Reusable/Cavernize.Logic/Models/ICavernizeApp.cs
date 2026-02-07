@@ -15,9 +15,14 @@ public interface ICavernizeApp {
     bool Rendering { get; }
 
     /// <summary>
-    /// The path of the currently open file.
+    /// Currently loaded audio file or container of the content.
     /// </summary>
-    string FilePath { get; }
+    AudioFile LoadedFile { get; }
+
+    /// <summary>
+    /// The track of the <see cref="LoadedFile"/> selected for rendering.
+    /// </summary>
+    CavernizeTrack SelectedTrack { get; set; }
 
     /// <summary>
     /// Codec to save the rendered content in.
@@ -30,11 +35,6 @@ public interface ICavernizeApp {
     RenderTarget RenderTarget { get; set; }
 
     /// <summary>
-    /// The voltage gain at which the content is rendered. Shall default to 1.
-    /// </summary>
-    float RenderGain { get; set; }
-
-    /// <summary>
     /// Access or modify settings related to matrix upmixing.
     /// </summary>
     UpmixingSettings UpmixingSettings { get; }
@@ -42,7 +42,12 @@ public interface ICavernizeApp {
     /// <summary>
     /// Access or modify settings related to special rendering modes.
     /// </summary>
-    SpecialRenderModeSettings SpecialRenderModeSettings { get; }
+    RenderingSettings RenderingSettings { get; }
+
+    /// <summary>
+    /// Swap the side and rear surround pair outputs.
+    /// </summary>
+    bool SurroundSwap { get; set; }
 
     /// <summary>
     /// Load a content file into the application for processing.

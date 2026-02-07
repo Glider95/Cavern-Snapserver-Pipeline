@@ -8,11 +8,16 @@ namespace Cavern.Format.Renderers {
     /// </summary>
     public class MeridianLosslessPackingRenderer : Renderer, IMixedBedObjectRenderer {
         /// <summary>
+        /// By default, the presentation with the most channels is selected. This forces a specific presentation index.
+        /// </summary>
+        public static int? ForcedPresentation;
+
+        /// <summary>
         /// Renders a decoded MLP stream with Cavern.
         /// </summary>
         public MeridianLosslessPackingRenderer(MeridianLosslessPackingDecoder stream) : base(stream) {
             if (stream.TracksIn16CH != 0) {
-                SetupObjects(stream.TracksIn16CH + stream.Beds.Length);
+                SetupObjects(stream.TracksIn16CH);
             } else {
                 SetupChannels();
             }

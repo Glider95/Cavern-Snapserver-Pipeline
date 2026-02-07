@@ -3,9 +3,10 @@
 		<TargetFramework>net8.0-windows</TargetFramework>
 		<OutputType>Library</OutputType>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<Version>2.1</Version>
 		<Authors>VoidX</Authors>
 		<Description>Useful WPF windows and utilities for audio applications.</Description>
-		<Copyright>Copyright © Bence Sgánetz 2016-2025</Copyright>
+		<Copyright>Copyright © Bence Sgánetz 2016-2026</Copyright>
 		<PackageProjectUrl>https://cavern.sbence.hu/</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/VoidXH/Cavern</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
@@ -16,18 +17,25 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+
+	<PropertyGroup Condition="'$(Configuration)' == 'Release'">
+		<DebugSymbols>false</DebugSymbols>
 		<DebugType>none</DebugType>
+		<Optimize>true</Optimize>
 	</PropertyGroup>
+
 	<ItemGroup>
 		<Compile Include="..\..\CavernSamples\VoidX.WPF\Animator.cs" Link="VoidX.WPF\Animator.cs" />
 	</ItemGroup>
+
 	<ItemGroup>
-		<PackageReference Include="System.Drawing.Common" Version="6.0.0" />
+		<PackageReference Include="System.Drawing.Common" Version="8.0.0" />
 	</ItemGroup>
+
 	<ItemGroup>
-	  <ProjectReference Include="..\..\Cavern.Format\Cavern.Format.csproj" />
-	  <ProjectReference Include="..\..\Cavern.QuickEQ\Cavern.QuickEQ.csproj" />
-	  <ProjectReference Include="..\..\Cavern\Cavern.csproj" />
+		<ProjectReference Include="..\..\Cavern.Format\Cavern.Format.csproj" />
+		<ProjectReference Include="..\..\Cavern.QuickEQ\Cavern.QuickEQ.csproj" />
+		<ProjectReference Include="..\..\Cavern.QuickEQ.Format\Cavern.QuickEQ.Format.csproj" />
+		<ProjectReference Include="..\..\Cavern\Cavern.csproj" />
 	</ItemGroup>
 </Project>
