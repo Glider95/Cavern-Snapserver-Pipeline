@@ -1,0 +1,35 @@
+# Build outputs
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.so
+*.dylib
+
+# Logs
+logs/*.log
+*.log
+
+# Temporary files
+*.fifo
+/tmp/
+
+# IDE
+.vscode/
+.vs/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# NuGet
+packages/
+*.nupkg
+
+# Don't ignore the logs directory itself
+!logs/.gitkeep

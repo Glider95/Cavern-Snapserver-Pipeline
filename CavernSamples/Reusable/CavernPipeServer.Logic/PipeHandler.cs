@@ -126,6 +126,35 @@ public class PipeHandler : IDisposable {
                 renderer.MetersAvailable += MetersAvailable;
                 renderer.OnException += OnException;
 
+                // Handle file-based mode: read file path from client
+                Console.WriteLine($"[PipeHandler] FileBasedMode={renderer.Protocol.IsFileBasedMode}, UpdateRate={renderer.Protocol.UpdateRate}");
+                if (renderer.Protocol.IsFileBasedMode) {
+                    Console.WriteLine("[PipeHandler] Entering file-based mode handling...");
+                    int pathLength = server.ReadInt32();
+                    Console.WriteLine($"[PipeHandler] Path length: {pathLength}");
+                    if (pathLength <= 0 || pathLength > 65535) {
+                        throw new InvalidDataException($"Invalid file path length: {pathLength}");
+                    }
+                    byte[] pathBytes = new byte[pathLength];
+                    ReadAll(pathBytes, pathLength);
+                    Console.WriteLine($"[PipeHandler] Read path bytes: {pathBytes.Length}");
+                    // Write both length and path to Input so CavernPipeRenderer can read it
+                    renderer.Input.Write(BitConverter.GetBytes(pathLength), 0, 4);
+                    renderer.Input.Write(pathBytes, 0, pathLength);
+                    // DO NOT call Flush() - it clears the queue in QueueStream!
+                    Console.WriteLine("[PipeHandler] Wrote to Input, calling Start()...");
+                    
+                    // Now safe to start rendering (file path is in Input)
+                    renderer.Start();
+                    
+                    // Wait a bit for renderer to start
+                    await Task.Delay(100, canceler.Token);
+                    
+                    // For file-based mode, just pump output to client until renderer is done
+                    await PumpOutputToClient(renderer, canceler.Token);
+                    continue; // Go to next connection
+                }
+
                 byte[] inBuffer = [],
                     outBuffer = [];
                 while (Running) {
@@ -162,6 +191,60 @@ public class PipeHandler : IDisposable {
                 server.Dispose();
                 server = null;
             }
+        }
+    }
+
+    /// <summary>
+    /// For file-based mode: continuously pump rendered output to client until done.
+    /// Uses chunked transfers with flow control to prevent client buffer overrun.
+    /// </summary>
+    async Task PumpOutputToClient(CavernPipeRenderer renderer, CancellationToken ct) {
+        const int MaxChunkSize = 65536; // 64KB max per chunk
+        byte[] outBuffer = new byte[MaxChunkSize];
+        try {
+            while (Running && !ct.IsCancellationRequested) {
+                // Wait for output to be available
+                await Task.Delay(5, ct);
+                
+                if (renderer?.Output == null) break;
+                
+                long available = renderer.Output.Length;
+                if (available == 0) {
+                    // Check if renderer is done
+                    if (renderer.Input == null) break;
+                    continue;
+                }
+                
+                // Send data in smaller chunks to prevent client overrun
+                while (available > 0 && Running) {
+                    int chunkSize = (int)Math.Min(available, MaxChunkSize);
+                    renderer.Output.Read(outBuffer, 0, chunkSize);
+                    
+                    // Send to client
+                    if (server?.IsConnected == true) {
+                        await server.WriteAsync(BitConverter.GetBytes(chunkSize), 0, 4, ct);
+                        await server.WriteAsync(outBuffer, 0, chunkSize, ct);
+                        await server.FlushAsync(ct);
+                    } else {
+                        return;
+                    }
+                    
+                    available -= chunkSize;
+                    
+                    // Small delay between chunks to let client process
+                    if (available > 0) {
+                        await Task.Delay(1, ct);
+                    }
+                }
+            }
+            
+            // Send end-of-stream marker
+            if (server?.IsConnected == true) {
+                await server.WriteAsync(BitConverter.GetBytes(0), 0, 4, ct);
+                await server.FlushAsync(ct);
+            }
+        } catch (Exception e) {
+            OnException?.Invoke(e);
         }
     }
 

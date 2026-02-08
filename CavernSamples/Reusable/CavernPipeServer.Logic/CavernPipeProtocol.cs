@@ -31,6 +31,11 @@ public class CavernPipeProtocol {
     public int UpdateRate { get; }
 
     /// <summary>
+    /// If true, the protocol is in file-based mode (negative UpdateRate).
+    /// </summary>
+    public bool IsFileBasedMode => UpdateRate < 0;
+
+    /// <summary>
     /// Reads CavernPipe control messages.
     /// </summary>
     public CavernPipeProtocol(Stream source) {
@@ -38,9 +43,9 @@ public class CavernPipeProtocol {
         int mandatoryFrames = source.ReadByte();
         OutputChannels = source.ReadUInt16();
         UpdateRate = source.ReadInt32();
-        if (UpdateRate <= 0) {
-            throw new SyncException(); // Extension point for later
-        }
-        MandatoryBytesToSend = mandatoryFrames * OutputChannels * UpdateRate * ((int)OutputFormat / 8);
+        // Allow negative UpdateRate for file-based mode
+        if (UpdateRate == 0) throw new SyncException();
+        int absRate = UpdateRate < 0 ? -UpdateRate : UpdateRate;
+        MandatoryBytesToSend = mandatoryFrames * OutputChannels * absRate * ((int)OutputFormat / 8);
     }
 }
